@@ -1,0 +1,197 @@
+---
+title: UQAM - BIA3010 - Atelier 1
+subtitle: Fonctions de base et manipulation de données avec R
+author:
+  - name: | 
+        Maxime Fraser Franco : 
+    affiliation: Département des Sciences Biologiques & Centre de la Science de la Biodiversité du Québec, Université du Québec à Montréal
+    email: fraser_franco.maxime@courrier.uqam.ca
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    highlight: zenburn
+    theme: flatly
+    df_print: paged
+    code_folding: hide
+#bibliography: refs-MLMM.bib
+#nocite: |
+#  @McElreath2020
+#  @Burkner2017
+#  @Burkner2018
+#  @FraserFranco.etal2022
+#  @Piironen.Vehtari2017
+#  @aczelDiscussionPointsBayesian2020
+#  @kruschkeBayesianAnalysisReporting2021
+#  @Vehtari.etal2017
+---
+
+Vous pouvez toujours trouver réponse à vos questions de R sur stackoverflow et stackexchange. Presque toutes les questions possibles sont posées!
+
+
+
+
+# Gestion de projet/dossiers
+
+Voici une liste d'éléments à retenir de nos discussions durant l'atelier en classe.
+
+## Aspects fondamentaux
+
+- Rappelez vous des différences entre le script, la console, et l'environnement
+- Rappelez-vous de travailler à l'échelle du projet.  Ça évite des conflits de working directory quand on veut enregistrer et ouvrir des fichiers dans R
+- Rappelez-vous que le working directory est l'endroit ou votre robot (console) travaille
+
+
+## Manières d'éxécuter R
+
+- via R directement
+- via RStudio
+- via VSCode
+- via votre dossier (projet) en entrant rstudio ou r (permet d'établir l'espace courant directement sans utilsier `setwd()`). Cette méthode requiert de mettre le chemin de votre installation dans votre environnement Windows (`PATH`)
+
+
+## Quelques points importants à retenir : 
+- Ne JAMAIS enregistrer le workspace (une nouvelle session devrait être toujours "fresh")
+- TOUJOURS enregistrer vos scripts! C'est fondamental.
+- N'oubliez pas, pas d'accents ou d'espaces dans les noms de fichiers
+
+
+
+
+# Comment les librairies (packages) fonctionnent ?
+
+## Description et exemples de librairies populaires
+
+Les librairies sont développées et déposés sur le [CRAN](https://cran.r-project.org/)  pour faire des choses qu'on veut.
+
+Voici quelques exemples :
+
+- Package `vegan` ou `FactoMineR` pour les analyses multivariées
+- Package `lme4` pour des modèles linéaires (ANOVA, ANCOVA, modèles mixtes, etc.) "classiques"
+- Package `brms` pour toutes sortes de modèles utilisant l'inférence bayésienne
+- Package - `ggplot2` pour faire de magnifiques graphiques
+
+
+
+# Importer des librairies -----------------------------------------------
+library(data.table)
+
+# =======================================================================
+# =======================================================================
+
+
+
+
+
+# =======================================================================
+# 3. Organisation des données
+# =======================================================================
+
+# Importer des données --------------------------------------------------
+
+# En mettant toutes les colones avec des caractères en type "factor"
+data <- read.table(file = "./data/donnees1.csv", header = TRUE, sep = ";", dec = ".", stringsAsFactors = TRUE)
+
+# En gardant les colones avec des caractères en type "chr"
+data <- read.table(file = "./data/donnees1.csv", header = TRUE, sep = ";", dec = ".")
+
+# Autre fonction d'importation de données dans R
+data1 <- read.csv("./data/donnees1.csv", sep = ';')
+
+# N'oubliez pas: NE JAMAIS MODIFIER LES DONNÉES BRUT (fichier .csv Excel, soit, vos données finales)
+# Faites-vous des données nettoyées que vous utilisez pour vos analyses
+# Nettoyez les dans Excel et enregistrez-les sous de nouveaux noms si vous n'êtes pas à l'aise de le faire directement dans R
+# Vous devriez tous avoir exactement les mêmes données dans votre équipe de travail!
+
+# =======================================================================
+# =======================================================================
+
+
+
+
+
+# =======================================================================
+# 4. Commandes de base
+# =======================================================================
+
+# Aller chercher une colone dans les données
+data$taille # retourne un vecteur
+data[,1] # retourne un vecteur
+
+# Changer le type d'une colone
+data$lac <- as.factor(data$lac)
+
+
+# Commandes de base -----------------------------------------------------
+ls() # Les objets qu'on a créé qui se trouvent dans l'environnement
+str(data) # structure des données
+head(data, 6) # 6 premières lignes (essayez de changer la valeur)
+range(data$taille) # range de valeurs de la colone taille
+mean(data$taille)
+sd(data$taille) # écart-type
+summary(data)
+
+
+# Indexation ------------------------------------------------------------
+# Indexer colone
+data[,1]
+data[,2]
+
+# Indexer ligne
+data[1,]
+
+# Indexer ligne et colone
+data[8, 3]
+
+# =======================================================================
+# =======================================================================
+
+
+
+
+
+# =======================================================================
+# 5. Inspection des données
+# =======================================================================
+
+# Identifier des NA -----------------------------------------------------
+sum(is.na(data$taille))
+
+
+# Identification d'erreurs d'entrée -------------------------------------
+# Identifier si les niveaux d'un facteur ou cellules dans une colone de type caractère sont tous pareilles
+# Ceci peut aider à identifier si vous avez fait des erreurs dans les noms (ex. d'espèces) rentrées dans la colone.
+# On va introduire une erreur pour tester
+data[1,2] <- "salut"
+levels(as.factor(data$lac))
+# On voit maintenant qu'on a 5 lacs incluant salut.
+
+# Filtrer par groupe ----------------------------------------------------
+data[data$lac == "labrecque",]
+data[data$lac == "cerne",]
+
+# Vous pouvez enregistrer une portion des données dans un objet
+# Ici, on garde seulement les données pour le lac Cerne
+data_cerne <- data[data$lac == "cerne",]
+
+
+# Compter le nombre de caractères différents qu'on a --------------------
+# Ici ça va retourner 4 car nous avons 4 lacs différents
+length(unique(data$lac))
+
+
+# Vérifier la distribution des données avec des histogrammes ------------
+hist(data$taille, breaks = 20)
+hist(data[data$lac == "labrecque",]$taille)
+hist(data[data$lac == "ledoux",]$taille)
+
+
+# Vérifier la taille par lac --------------------------------------------
+boxplot(data$taille~data$lac)
+with(data, boxplot(taille~lac))
+
+# =======================================================================
+# =======================================================================
+
