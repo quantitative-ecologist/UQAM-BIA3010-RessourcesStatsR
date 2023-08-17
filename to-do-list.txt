@@ -1,0 +1,4 @@
+to do :
+ajouter une license qui réflète celle du CSBQ pour les ateliers
+donner crédit au CSBQ pour les données et référer aux ateliers du CSBQ
+ajouter les markdown 1 par 1 avec les thèmes
