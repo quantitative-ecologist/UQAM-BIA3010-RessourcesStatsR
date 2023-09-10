@@ -40,6 +40,8 @@ Dans cet atelier, nous allons voir comment utiliser R pour effectuer trois types
 
 Ces trois analyses sont utilisées pour différents cas de figure et dépendent du "design" expérimental que vous avez fait. Nous allons voir comment reconnaître ces cas de figure pour rapidement évaluer le type d'analyse nécessaire pour répondre à nos questions.
 
+**À noter**: le présent document est en format .html et a été généré avec [R Markdown](https://rmarkdown.rstudio.com/). C'est simplement une façon de générer des documents beaux pour expliquer du code. Ainsi, vous pouvez copier-coller le code de chaque cellule dans une session R sur votre ordinateur personnel et produire l'ensemble des analyses présentées dans le document.
+
 <br>
 
 
@@ -102,9 +104,33 @@ donnees_zoo <- read.table(
 
 
 
-# Préparons une table de données pour les analyses
+# Visualiser nos données bruts
 
-On calcule le nombre de captures par fragment forestier en utilisant la fonction `aggregate()`. L'argument `FUN = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les fragments.
+```{r}
+str(donnees_capture)
+head(donnees_capture)
+```
+
+```{r}
+str(donnees_fragments)
+head(donnees_fragments)
+```
+
+```{r}
+str(donnees_zoo)
+head(donnees_zoo)
+```
+
+<br>
+
+
+
+
+# Préparer une table de données pour les analyses
+
+Nous allons tout d'abord créer une table synthétique pour les données de captures et de types de fragments forestiers. Nous reviendrons plus tard aux données de taille de zooplancton qui sont déjà prêtes à être analysées.
+
+Nous allons en premier lieu calculer le nombre de captures par fragment forestier en utilisant la fonction `aggregate()`. L'argument `FUN = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les fragments.
 ```{r}
 nbr_captures <- aggregate(
     donnees_capture$capture,
@@ -116,13 +142,13 @@ nbr_captures <- aggregate(
 names(nbr_captures) <- c("fragment", "nbr_capture")
 ```
 
-On va ensuite créer un objet sous forme de `data.frame` où on conserve comme information seulement la liste des espèces trouvées par fragment forestier.
+On va ensuite créer un objet sous forme de `data.frame` où on conserve comme information seulement la liste des espèces trouvées par fragment forestier. Visualisons à quoi ressemble notre table.
 ```{r}
 donnees_capture1 <- unique(donnees_capture)
 head(donnees_capture1)
 ```
 
-À partir de l'objet créé `donnees_capture1`, on recense le nombre d'espèces par fragment.
+À partir de l'objet créé `donnees_capture1`, on recense le nombre d'espèces par fragment. À noter que notre unité d'échantillonage est le fragment qui sont des réplicas pour le type de fragment forestier, soit, coupe totale, coupe partielle, et la forêt mature. 
 ```{r}
 nbr_especes <- aggregate(
     donnees_capture1$capture,
@@ -132,9 +158,78 @@ nbr_especes <- aggregate(
 names(nbr_especes)  <- c("fragment", "nbr_especes")
 ```
 
-Finalement, on combine les données que nous avons créé pour avoir une table synthétique pour nos analyses
-
+Finalement, la dernière étape consiste à combiner les données que nous avons créé pour avoir une table synthétique prête à être utilisée pour nos analyses.
 ```{r}
 nbrs <- merge(nbr_captures, nbr_especes, by = "fragment")
 data_final <- merge(donnees_fragments, nbrs, by = "fragment")
 ```
+
+On peut visualiser la structure de cette table pour bien la comprendre.
+```{r}
+str(data_final)
+head(data_final)
+``` 
+
+La table consiste en une liste de 80 fragments forestiers issus de forêts matures, forêts à coupe partielle, et forêt à coupe totale. Notez que nous avons la superficie de chaque fragment forestier échantillonné. Finalement, l'information cruciale consiste en le nombre de captures qui ont été effecutées à chaque fragment, ainsi que le nombre d'espèces qui a été observé à ces fragments. À la lumière de ces informations, quelles questions écologiques pourrions-nous nous poser et quel type d'analyse pourrions-nous faire pour répondre à nos questions?
+
+<br>
+
+
+
+
+# Comparer des moyennes
+
+Nous allons revenir à notre table de zooplancton et l'utiliser pour comparer les moyennes. Rappelez-vous que dans cette table, nous avons échantillonné du zooplancton à travers 4 lacs et mesuré individuellement la taille des zooplanctons.
+
+La première question qu'on peut se poser est de savoir quelle est la moyenne de notre échantillon pour l'ensemble des lacs?
+```{r}
+mean(donnees_zoo$taille)
+```
+
+Qu'en est-il de la taille de nos zooplanctons par lac? Voyons-voir :
+```{r}
+aggregate(
+  taille ~ lac,
+  data = donnees_zoo,
+  FUN = mean
+)
+```
+
+Rapidement, il semble que nos moyennes diffèrent. Par contre, pour confirmer que cela est le cas, il va falloir le tester "statistiquement". La méthode la + simple et connue est le test de Student.
+
+## Comparaison de moyenne à une valeur théorique
+
+Commençons par une comparaison de moyenne à une valeur théorique. Ici, on assume que la moyenne théorique est de 1000 um, et on compare la taille globale de tous nos lacs pour voir si elle est inférieure ou supérieure à la valeur moyenne théorique.
+
+```{r}
+t.test(donnees_zoo$taille, mu = 1000)
+
+# En prenant seulement 1 lac parmi les 4
+t.test(
+    donnees_zoo[donnees_zoo$lac == "labrecque", ]$taille,
+    mu = 1000
+)
+```
+
+On voit que nos tailles d'effet sont très grandes et nos valeurs p sont très petites. On peut donc affirmer avec certitude que nos moyennes sont effectivements différentes à cette valeur. Dans notre cas, la moyenne est inférieure.
+
+
+## Comparaison de moyenne entre 2 échantillons indépendants
+
+Ici, on compare deux des lacs échantillonnés. On assume que les variances sont égales (même si ici, ce n'est pas le cas)
+```{r}
+t.test(
+    donnees_zoo[donnees_zoo$lac == "labrecque",]$taille,
+    donnees_zoo[donnees_zoo$lac == "cerne",]$taille,
+    var.equal = TRUE, paired = FALSE
+)
+```
+
+Pour être honnête, les tests de Student sont très vieux et il existe des méthodes beaucoup plus élégantes et robustes pour comparer des moyennes. Toutefois, il faut un début à tout et vous savez maintenant comment facilement et rapidement comparer des moyennes.
+
+<br>
+
+
+
+
+# L'analyse de variance
