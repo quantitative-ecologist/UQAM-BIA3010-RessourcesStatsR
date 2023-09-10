@@ -1,0 +1,143 @@
+---
+title: Séries d'ateliers R - UQAM - BIA3010
+subtitle: Atelier 3 - Comparaisons de moyennes, ANOVA, et régression simple
+author:
+  - name: | 
+        Maxime Fraser Franco : 
+    affiliation: Département des Sciences Biologiques & Centre de la Science de la Biodiversité du Québec, Université du Québec à Montréal
+    email: fraser_franco.maxime@courrier.uqam.ca
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    highlight: zenburn
+    theme: flatly
+    df_print: paged
+    #code_folding: hide
+#bibliography: refs-MLMM.bib
+#nocite: |
+#  @McElreath2020
+#  @Burkner2017
+#  @Burkner2018
+#  @FraserFranco.etal2022
+#  @Piironen.Vehtari2017
+#  @aczelDiscussionPointsBayesian2020
+#  @kruschkeBayesianAnalysisReporting2021
+#  @Vehtari.etal2017
+---
+
+<br>
+
+# Sommaire
+
+Dans cet atelier, nous allons voir comment utiliser R pour effectuer trois types d'analyses classiques en biologie, mais aussi même dans plusieurs sciences en général. Ces trois analyses sont :
+- La comparaison de moyennes
+- L'analyse de variance (ANOVA)
+- La régression linéaire simple
+
+Ces trois analyses sont utilisées pour différents cas de figure et dépendent du "design" expérimental que vous avez fait. Nous allons voir comment reconnaître ces cas de figure pour rapidement évaluer le type d'analyse nécessaire pour répondre à nos questions.
+
+<br>
+
+
+
+
+# Préparer notre session
+
+Pour initier notre session de programmation dans R, il nous faudra faire 2 étapes essentielles. La première sera de charger les librairies nécessaires pour effectuer nos analyses, puis ensuite d'importer nos données dans la session pour commencer à les manipuler et les modéliser.
+
+
+## Charger les librairies
+
+Voici les librairies que nous utiliserons:
+
+- Package [`lme4`](https://cran.r-project.org/web/packages/lme4/index.html) pour des modèles linéaires (ANOVA, ANCOVA, modèles mixtes, etc.) "classiques"
+- Package [`ggplot2`](https://ggplot2.tidyverse.org/) pour faire de magnifiques graphiques
+- Package [`data.table`](https://rdatatable.gitlab.io/data.table/index.html) et le [`tidyverse`](https://www.tidyverse.org/) pour la manipulation de données
+
+Chargons donc nos librairies. Si vous ne les avez pas installées, vous devez tout dabord le faire en faisant la commande `install.packages("librairie")`.
+
+```{r}
+
+# Définir le vecteur des librairies à charger
+packages <- c("lme4", "ggplot2", "data.table")
+
+# Charger toutes les librairies d'un coup
+lapply(packages, library, character.only = TRUE)
+
+```
+
+
+## Importer les données
+
+Dépendemment de comment vous utilisez R, vous devrez tout d'abord peut-être devoir "set" votre working directory avec `setwd("votre/chemin/dans/windows/ou/mac")`
+
+Par contre, si vous travaillez à l'échelle du projet dans Rstudio comme nous avons vu à l'atelier 1, alors pas besoin de `setwd()`. Vous pourrez confirmer que vous êtes déjà dans le bon chemin (dossier) en faisant la commande `getwd()`.
+
+Nous allons travailler avec trois bases de données différentes. La première consiste en des données de capture de micro-mammifères, et l'autre des données de fragments forestiers. La troisième table sont des données de taille de zooplancton échantillonnées dans 4 lacs.
+
+```{r}
+# Données de capture d'espèces dans différents fragments
+donnees_capture <- read.table(
+    file = "./data/donnees-captures.csv",
+    header = TRUE, sep = ";", dec = "."
+)
+
+# Données de superficie de fragments forestiers selon le type de forêt
+donnees_fragments <- read.table(
+    file = "./data/donnees-fragments.csv",
+    header = TRUE, sep = ";", dec = "."
+)
+
+# Données de tailles de zooplancton prises dans différents lacs
+donnees_zoo <- read.table(
+    file = "./data/donnees-zoo.csv",
+    header = TRUE, sep = ";", dec = "."
+)
+```
+
+<br>
+
+
+
+
+# Préparons nos table de données pour l'ANOVA
+
+On calcule le nombre de captures par type de fragment forestier en utilisant la fonction `aggregate()`. L'argument `fun = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les types de fragments.
+
+```{r}
+nbr_captures <- aggregate(
+    donnees_capture$capture,
+    list(donnees_capture$fragment),
+    fun = length
+)
+
+# On renomme les colones
+names(nbr_captures) <- c("fragment", "nbr_capture")
+```
+
+On veut seulement les espèces trouvées par fragment
+
+```{r}
+
+donnees_capture1 <- unique(donnees_capture)
+```
+
+On recense le nombre d'espèces
+
+```{r}
+nbr_especes <- aggregate(donnees_capture1$capture, by = list(donnees_capture1$fragment), FUN = length)
+names(nbr_especes)  <- c("fragment", "nbr_especes")
+```
+
+
+# On combine les données pour avoir une table pour l'analyse
+nbrs <- merge(nbr_captures, nbr_especes, by = "fragment")
+
+# On combine aux données de superficie
+data_final <- merge(donnees_fragments, nbrs, by = "fragment")
+
+# =======================================================================
+# =======================================================================
