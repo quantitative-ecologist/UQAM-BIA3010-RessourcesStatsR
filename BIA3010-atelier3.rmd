@@ -32,7 +32,8 @@ output:
 
 # Sommaire
 
-Dans cet atelier, nous allons voir comment utiliser R pour effectuer trois types d'analyses classiques en biologie, mais aussi même dans plusieurs sciences en général. Ces trois analyses sont :
+Dans cet atelier, nous allons voir comment utiliser R pour effectuer trois types d'analyses classiques en biologie, mais aussi même dans plusieurs sciences en général. Ces trois analyses sont:
+
 - La comparaison de moyennes
 - L'analyse de variance (ANOVA)
 - La régression linéaire simple
@@ -58,7 +59,6 @@ Voici les librairies que nous utiliserons:
 - Package [`data.table`](https://rdatatable.gitlab.io/data.table/index.html) et le [`tidyverse`](https://www.tidyverse.org/) pour la manipulation de données
 
 Chargons donc nos librairies. Si vous ne les avez pas installées, vous devez tout dabord le faire en faisant la commande `install.packages("librairie")`.
-
 ```{r}
 
 # Définir le vecteur des librairies à charger
@@ -77,7 +77,6 @@ Dépendemment de comment vous utilisez R, vous devrez tout d'abord peut-être de
 Par contre, si vous travaillez à l'échelle du projet dans Rstudio comme nous avons vu à l'atelier 1, alors pas besoin de `setwd()`. Vous pourrez confirmer que vous êtes déjà dans le bon chemin (dossier) en faisant la commande `getwd()`.
 
 Nous allons travailler avec trois bases de données différentes. La première consiste en des données de capture de micro-mammifères, et l'autre des données de fragments forestiers. La troisième table sont des données de taille de zooplancton échantillonnées dans 4 lacs.
-
 ```{r}
 # Données de capture d'espèces dans différents fragments
 donnees_capture <- read.table(
@@ -103,41 +102,39 @@ donnees_zoo <- read.table(
 
 
 
-# Préparons nos table de données pour l'ANOVA
+# Préparons une table de données pour les analyses
 
-On calcule le nombre de captures par type de fragment forestier en utilisant la fonction `aggregate()`. L'argument `fun = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les types de fragments.
-
+On calcule le nombre de captures par fragment forestier en utilisant la fonction `aggregate()`. L'argument `FUN = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les fragments.
 ```{r}
 nbr_captures <- aggregate(
     donnees_capture$capture,
     list(donnees_capture$fragment),
-    fun = length
+    FUN = length
 )
 
 # On renomme les colones
 names(nbr_captures) <- c("fragment", "nbr_capture")
 ```
 
-On veut seulement les espèces trouvées par fragment
-
+On va ensuite créer un objet sous forme de `data.frame` où on conserve comme information seulement la liste des espèces trouvées par fragment forestier.
 ```{r}
-
 donnees_capture1 <- unique(donnees_capture)
+head(donnees_capture1)
 ```
 
-On recense le nombre d'espèces
-
+À partir de l'objet créé `donnees_capture1`, on recense le nombre d'espèces par fragment.
 ```{r}
-nbr_especes <- aggregate(donnees_capture1$capture, by = list(donnees_capture1$fragment), FUN = length)
+nbr_especes <- aggregate(
+    donnees_capture1$capture,
+    by = list(donnees_capture1$fragment),
+    FUN = length
+)
 names(nbr_especes)  <- c("fragment", "nbr_especes")
 ```
 
+Finalement, on combine les données que nous avons créé pour avoir une table synthétique pour nos analyses
 
-# On combine les données pour avoir une table pour l'analyse
+```{r}
 nbrs <- merge(nbr_captures, nbr_especes, by = "fragment")
-
-# On combine aux données de superficie
 data_final <- merge(donnees_fragments, nbrs, by = "fragment")
-
-# =======================================================================
-# =======================================================================
+```
