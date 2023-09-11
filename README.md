@@ -4,13 +4,39 @@ Un ensemble de ressources pour apprendre à faire des analyses statistiques avec
 ## Liste d'ateliers
 
 ### Les bases avec R:
-  - Atelier 1: les fonctions de base et la manipulation de données avec R
+  - Atelier 1 : 
+    - organisation d'une base de données
+
+  - Atelier 2 :
+    - introduction à R et R Studio
+    - manipulations de base (matrices, vecteurs, données)
+    - importation de données
+    - exportation de données
+    - Projet R
 
 ### Analyses de données univariées
-- Atelier 2: comparaison de moyennes et analyse de variance à un facteur
-- Atelier 3: régression linéaire
-- Atelier 4a: analyse de variance à deux facteurs
-- Atelier 4b: analyse de covariance
+  - Atelier 3 : 
+    - ANOVA
+    - régression linéaire
+    - interprétations et graphiques
+  - Atelier 4 :
+    - Retour sur l'atelier 3 avec un GLM
+    - ANOVA à deux facteurs
+    - ANCOVA
+
+### Révision
+  - Atelier 5 : 
+    - retour sur les ateliers 1 à 4
 
 ### Analyses de données multivariées
-- Atelier 5: analyse de correspondance, envfit, PERMANOVA, et matrices de distance
+  - Atelier 6 :
+    - matrices de communautés
+    - analyse de correspondance (CA)
+    - EnvFit
+    - PERMANOVA
+    - tests Procrustes
+
+### Visualisation
+- Atelier 7 :
+  - Visualiser les résultats
+  - Produire de belles figures
