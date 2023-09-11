@@ -263,13 +263,15 @@ L'analyse de variance est une méthode de choix lorsqu'il s'agit de répondre à
 
 Avant de procéder à notre analyse, il est important de connaître les étapes clés lorsqu'on fait un modèle linéaire, étant de :
 
-1. produire le modèle
-2. vérifier les postulats (suppositions) de base
+**1.** Produire le modèle
+
+**2.** Vérifier les postulats (suppositions) de base
 
 si l'étape 2 échoue, on retourne à 1 et on ajuste le modèle
 
-3. Quand on réussi l'étape 2, on produit la table des estimés
-4. produire un graphique 
+**3.** Quand on réussi l'étape 2, on produit la table des estimés
+
+**4.** Produire un graphique
 
 Ces étapes devraient être faites dans cet ordre et répétées autant que nécessaire jusqu'à ce qu'on soit confiant que notre modèle est juste et qu'il nous donne une information qui fait du sens scientifiquement.
 
@@ -392,7 +394,7 @@ results_df <- data.frame(
   ci_high = ci_high
 )
 
-# Create a forest plot
+# Créer le graphique
 ggplot(results_df, aes(x = type, y = mean)) +
   geom_pointrange(
     aes(ymin = ci_low, ymax = ci_high),
@@ -444,12 +446,23 @@ table <- data.frame(
 
 # Produire le graphique des prédictions
 ggplot(table, aes(x = type, y = nmbr)) +
+
+# On commence par ajouter les données bruts
+  geom_jitter(
+    data = data_final, aes(x = type, y = nbr_especes),
+    shape = 16, color = "dodgerblue", size = 2.5,
+    position = position_jitter(0.2)
+  ) +
+
+# Prédictions du modèle
   geom_pointrange(
     aes(ymin = lower, ymax = upper),
     size = 0.8,
     position = position_dodge(width = 0.3)
   ) +
-  scale_y_continuous(breaks = seq(0, 8, 2), limits = c(0, 8)) +
+
+# Paramètres graphiques
+  scale_y_continuous(breaks = seq(0, 12, 4), limits = c(0, 12.5)) +
   xlab("\nType de forêt") +
   ylab("Nombre d'espèces moyen prédit\n") +
   theme_bw(base_size = 12) +
@@ -462,10 +475,234 @@ ggplot(table, aes(x = type, y = nmbr)) +
 Finalement, une méthode encore + simple que vous pouvez utiliser est de produire un diagramme en boîte à moustaches de vos données bruts. Cependant, il est à noter que cette représentation visuelle est sur les données bruts, et elle ne contient donc pas toute l'information que notre modèle contenait. C'est toutefois la méthode la plus simple et directe de représenter nos données.
 
 ```{r}
-boxplot(
-  nbr_especes ~ type,
-  xlab = "Type de forêt",
-  ylab = "Nombre d'espèces moyen prédit",
-  data = data_final
+ggplot(data = data_final, aes(x = type, y = nbr_especes)) +
+
+# On ajoute le boxplot
+  geom_boxplot(color = "black", fill = "lightgray") +
+
+# On ajoute les données bruts
+  geom_jitter(
+    data = data_final, aes(x = type, y = nbr_especes),
+    shape = 16, color = "dodgerblue", size = 2.5,
+    position = position_jitter(0.2)
+  ) +
+
+# Paramètres graphiques
+  scale_y_continuous(breaks = seq(0, 12, 4), limits = c(0, 12.5)) +
+  xlab("\nType de forêt") +
+  ylab("Nombre d'espèces capturées\n") +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12))
+```
+
+# Conclusions de l'ANOVA
+
+À la lumière de nos résultats, nous pouvons conclure qu'il existe bel et bien une différence dans le nombre d'espèces capturées entre les types de forêt. Nous avons pu voir qu'il n'y a pas de différence entre les forêts à coupes partielles et les forêts matures. Toutefois, le nombre d'espèces moyen capturées dans les fragments de forêts à coupe totale diffèrent significativement de ceux des deux autres forêts.
+
+<br>
+
+
+
+
+# Pause
+
+respirons...
+
+<br>
+
+
+
+
+# La régression linéaire simple
+
+La régression linéaire simple est une technique classique qui constitue la base de multiples techniques + complexes ainsi que celles développées en intelligence artificielle.
+
+Ici, nous allons continuer notre exploration des données de fragments forestiers pour en nous posant une nouvelle question. Comme vous vous rappelez, nous avons des données de superficie pour chaque fragment. Il est bien connu en écologie que la superficie d'un milieu peut influencer le nombre d'espèces qu'on y retrouve.
+
+Typiquement, on assume que + la superficie est grande, plus un habitat peut supporter un nombre d'espèces élevé. Nous allons donc tester cette hypothèse à l'aide d'un régression linéaire où notre variable x sera la superficie des fragments.
+
+Les étapes sont les mêmes que pour l'ANOVA. Commençons!
+
+## Produire le modèle
+
+Nous allons tout d'abord commencer par centrer et réduire ("standardiser") notre variable superficie. Nous allons voir pourquoi plus loin. L'idée est de soustraire la superficie moyenne à chaque observation et ensuite diviser la valeur par l'écart-type de la superficie. Nos observations de superficie seront alors transformées en unitées d'écart-type. Les valeurs positives indiquent des superficies supérieures à la moyenne et les valeurs négatives indiquent des superficies inférieures à la moyenne.
+
+On utilise la fonction `scale()` pour faire cela et effectue la transformation sur le vecteur de superficie. On assigne la transformation à la table en créant une nouvelle colonne appelée `superficie_cr`.
+
+```{r}
+data_final$superficie_cr <- scale(data_final$superficie)
+```
+
+On peut maintenant produire le modèle linéaire.
+
+```{r}
+# Comme l'anova est un modèle linéaire, on utilise la fonction "lm()"
+mod_reg <- lm(nbr_especes ~ superficie_cr, data = data_final)
+```
+
+
+## Vérifier les postulats de base
+
+Pour la régression les postulats de base sont juste un peu différents:
+
+1. Les échantillons sont indépendants
+2. La relation entre y et x est linéaire
+3. Les résidus sont Gaussiens
+4. Les résidus sont homogènes autour de la droite de régression
+
+On vérifie d'abord que les résidus sont Gaussiens.
+
+```{r}
+# On extrait les résidus
+resid_reg <- resid(mod_reg)
+
+# Vérifier la normalité des résidus
+hist(
+  resid_reg,
+  xlab = "Résidus du modèle",
+  ylab = "Nombre d'observations",
+  main = "", col = "darkgray", cex.lab = 1.5
 )
+```
+
+On vérifie ensuite si nos résidus sont homogènes le long de nos valeurs prédites. On veut que les observations soient distribuées le long de la droite pointillée de façon relativement homogène. Si on ne detecte pas de patron clair, notre modèle est donc bon et les résidus sont OK!
+
+```{r}
+plot(
+  resid_reg ~ fitted(mod_reg),
+  xlab = "Valeurs prédites par le modèle",
+  ylab = "Résidus du modèle",
+  pch = 19
+)
+abline(
+  h = 0,
+  col = "dodgerblue",
+  lty = "dashed",
+  lwd = 2
+)
+```
+
+
+## Produire la table des estimés
+
+Maintenant que nous savons que l'ajustement de notre modèle est OK, nous allons visualiser le sommaire du modèle linéaire avec la fonction `summary()`.
+
+```{r}
+summary(mod_reg)
+```
+
+La sortie est un peu différente de ce que nous avons vu tout à l'heure. Les paramètres importants demeurent les mêmes que pour l'ANOVA, mais ils ne s'interprètent pas de la même façon.
+
+Tout d'abord, l'ordonnée à l'origine `Intercept` nous indique la valeur moyenne d'espèces observées pour une superficie moyenne. Ceci est important à comprendre et nous ramène à la raison pour laquelle nous avons centré et réduit. Normalement, une ordonnée à l'origine correspond à la moyenne de y lorsque x est égal à 0. Toutefois, cela ne fait pas de sens dans notre cas car il est impossible d'avoir un fragment forestier avec une superficie de 0. C'est pourquoi nous avons centré réduit notre superficie pour que l'interprétation de l'ordonnée à l'origine se fasse à partir d'une superficie moyenne.
+
+Ensuite, la valeur `Estimate` pour la superficie_cr nous indique la direction de la relation entre le nombre d'espèces et la superficie ainsi que sa force. Comme vous pouvez voir, pour chaque unité d'écart-type de superficie, il semble que nous avons une augmentation de 1.59 espèces, ce qui est grand!
+
+Le test de t nous indique simplement si la valeur de l'ordonnée à l'origine ainsi que celle de la pente est significativement différente de 0. Dans les deux cas, la statistique est élevée (`t value`) et la valeur p est sous le seuil de 0.05. Il ya donc une relation positive et significative entre le nombre d'espèces et la superficie.
+
+Finalement, nous voyons que le R carré ajusté est de 34%, ce qui est très important. Encore une fois, cela veut dire que 34% de notre variation en nombre d'espèces est attribuable à la superficie des fragments forestiers.
+
+
+## Produire le graphique
+
+On commence par produire les prédictions de notre modèle pour faire le graphique.
+
+```{r}
+# Jeu de données à partir des données originales
+new_dat <- data.frame(
+  superficie = seq(
+    min(data_final$superficie_cr),
+    max(data_final$superficie_cr),
+    length.out = 100
+  )
+)
+
+# Matrice des coefficients du modèle
+mm <- model.matrix(~ superficie, new_dat)
+
+# Calculer les valeur prédites
+fitted_values <- mm %*% coef(mod_reg)
+
+# Produire les erreurs pour l'intervalle de confiance
+pvar <- diag(mm %*% tcrossprod(vcov(mod_reg), mm))
+tvar <- pvar + var(resid(mod_reg))
+
+# Générer une table pour produire facilement le graphique
+table <- data.frame(
+  superficie = new_dat$superficie,
+  especes_y = fitted_values,
+  # Intervalles de confiance
+  lower_ci = fitted_values - 1.96 * sqrt(pvar),
+  upper_ci = fitted_values + 1.96 * sqrt(pvar),
+  # Intervalles de prédiction
+  lower_pi = fitted_values - 1.96 * sqrt(tvar),
+  upper_pi = fitted_values + 1.96 * sqrt(tvar)
+)
+
+```
+
+On peut maintenant produire le graphique. Le code est gros mais il s'agit simplement d'ajouter des couches pour chaque information dans notre table de données.
+
+```{r}
+# Produire le graphique
+ggplot(table) +
+
+  # Les observations bruts
+  geom_point(data = data_final,
+             aes(x = superficie_cr, y = nbr_especes),
+             shape = 19,
+             color = "dodgerblue") +
+
+  # La droite de la régression
+  geom_line(aes(x = superficie, y = especes_y),
+            linewidth = 1,
+            color = "dodgerblue") +
+
+  # Intervalles de confiance
+  geom_line(aes(x = superficie, y = lower_ci),
+            linetype = "dashed",
+            linewidth = 1,
+            color = "black") +
+  geom_line(aes(x = superficie, y = upper_ci),
+            linetype = "dashed",
+            linewidth = 1,
+            color = "black") +
+
+  # Intervalles de prédiction
+  geom_ribbon(aes(x = superficie,
+                  ymin = lower_pi,
+                  ymax = upper_pi),
+              alpha = 0.2,
+              fill = "dodgerblue") +
+
+  # Si vous voulez jouer avec les valeurs des axes
+  scale_x_continuous(breaks = seq(-2, 3, 1),
+                     limits = c(-2, 3.6)) +
+
+  # Quelques ajustements graphiques
+  xlab("\nSuperficie normalisée") +
+  ylab("Nombre d'espèces capturées\n") +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12))
+
+
+# 2. Méthode simple qui fait la même chose
+# allez lire sur la fonction pour personnaliser le graph.
+# grosso-modo, ça utilise ggplot2
+# https://strengejacke.github.io/sjPlot/index.html
+# install.packages("sjPlot")
+#library(sjPlot)
+#plot_model(modele1, type = "pred", terms = "Zsuperficie",
+#           show.data = T, title = " ",
+#           dot.size = 2, line.size = 1) +
+#  scale_x_continuous(breaks = seq(-2, 3, 1),
+#                     limits = c(-2, 3.6)) +
+#  xlab("\nSuperficie normalisée") +
+#  ylab("Nombre d'espèces capturées\n")
+
+
+# On exporte la figure dans notre dossier "outputs"
+#ggexport(graphique_regression, filename = "figure_regression.png",
+#         width = 1500, height = 1500, res = 300)
 ```
