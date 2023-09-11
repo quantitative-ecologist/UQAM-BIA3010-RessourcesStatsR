@@ -1,6 +1,6 @@
 ---
 title: Séries d'ateliers R - UQAM - BIA3010
-subtitle: Atelier 3 - Comparaisons de moyennes, ANOVA, et régression simple
+subtitle: Atelier 3 - Analyse de variance et régression simple
 author:
   - name: | 
         Maxime Fraser Franco : 
@@ -32,13 +32,12 @@ output:
 
 # Sommaire
 
-Dans cet atelier, nous allons voir comment utiliser R pour effectuer trois types d'analyses classiques en biologie, mais aussi même dans plusieurs sciences en général. Ces trois analyses sont:
+Dans cet atelier, nous allons voir comment utiliser R pour effectuer deux types d'analyses classiques en biologie, mais aussi même dans plusieurs sciences en général. Ces analyses sont:
 
-- La comparaison de moyennes
 - L'analyse de variance (ANOVA)
 - La régression linéaire simple
 
-Ces trois analyses sont utilisées pour différents cas de figure et dépendent du "design" expérimental que vous avez fait. Nous allons voir comment reconnaître ces cas de figure pour rapidement évaluer le type d'analyse nécessaire pour répondre à nos questions.
+Ces deux analyses sont utilisées pour différents cas de figure et dépendent du "design" expérimental que vous avez fait. Nous allons voir comment reconnaître ces cas de figure pour rapidement évaluer le type d'analyse nécessaire pour répondre à nos questions.
 
 **À noter**: le présent document est en format .html et a été généré avec [R Markdown](https://rmarkdown.rstudio.com/). C'est simplement une façon de générer des documents beaux pour expliquer du code. Ainsi, vous pouvez copier-coller le code de chaque cellule dans une session R sur votre ordinateur personnel et produire l'ensemble des analyses présentées dans le document.
 
@@ -58,13 +57,13 @@ Voici les librairies que nous utiliserons:
 
 - Package [`lme4`](https://cran.r-project.org/web/packages/lme4/index.html) pour des modèles linéaires (ANOVA, ANCOVA, modèles mixtes, etc.) "classiques"
 - Package [`ggplot2`](https://ggplot2.tidyverse.org/) pour faire de magnifiques graphiques
-- Package [`data.table`](https://rdatatable.gitlab.io/data.table/index.html) et le [`tidyverse`](https://www.tidyverse.org/) pour la manipulation de données
+- Package [`boot`](https://cran.r-project.org/web/packages/boot/boot.pdf) pour faire des simulations
 
 Chargons donc nos librairies. Si vous ne les avez pas installées, vous devez tout dabord le faire en faisant la commande `install.packages("librairie")`.
 ```{r}
 
 # Définir le vecteur des librairies à charger
-packages <- c("lme4", "ggplot2", "data.table")
+packages <- c("lme4", "ggplot2", "boot")
 
 # Charger toutes les librairies d'un coup
 lapply(packages, library, character.only = TRUE)
@@ -76,9 +75,14 @@ lapply(packages, library, character.only = TRUE)
 
 Dépendemment de comment vous utilisez R, vous devrez tout d'abord peut-être devoir "set" votre working directory avec `setwd("votre/chemin/dans/windows/ou/mac")`
 
-Par contre, si vous travaillez à l'échelle du projet dans Rstudio comme nous avons vu à l'atelier 1, alors pas besoin de `setwd()`. Vous pourrez confirmer que vous êtes déjà dans le bon chemin (dossier) en faisant la commande `getwd()`.
+Par contre, si vous travaillez à l'échelle du projet dans Rstudio comme nous avons vu à l'atelier 2, alors pas besoin de `setwd()`. Vous pourrez confirmer que vous êtes déjà dans le bon chemin (dossier) en faisant la commande `getwd()`.
 
-Nous allons travailler avec trois bases de données différentes. La première consiste en des données de capture de micro-mammifères, et l'autre des données de fragments forestiers. La troisième table sont des données de taille de zooplancton échantillonnées dans 4 lacs.
+Nous allons travailler avec deux bases de données différentes. La première consiste en des données de capture de micro-mammifères à travers 80 fragments forestiers, et l'autre des données environnementales qui caractérisent les 80 fragments, étant la superficie des fragments ainsi que le type de forêt dans lequel le fragment a été échantillonné. Les trois types de forêts sont :
+
+- des fragments en forêt mature
+- des fragments en forêt avec coupes partielles
+- des fragments dans des forêts ou il y a eu coupe totale
+
 ```{r}
 # Données de capture d'espèces dans différents fragments
 donnees_capture <- read.table(
@@ -89,12 +93,6 @@ donnees_capture <- read.table(
 # Données de superficie de fragments forestiers selon le type de forêt
 donnees_fragments <- read.table(
     file = "./data/donnees-fragments.csv",
-    header = TRUE, sep = ";", dec = "."
-)
-
-# Données de tailles de zooplancton prises dans différents lacs
-donnees_zoo <- read.table(
-    file = "./data/donnees-zoo.csv",
     header = TRUE, sep = ";", dec = "."
 )
 ```
@@ -116,11 +114,6 @@ str(donnees_fragments)
 head(donnees_fragments)
 ```
 
-```{r}
-str(donnees_zoo)
-head(donnees_zoo)
-```
-
 <br>
 
 
@@ -128,7 +121,14 @@ head(donnees_zoo)
 
 # Préparer une table de données pour les analyses
 
-Nous allons tout d'abord créer une table synthétique pour les données de captures et de types de fragments forestiers. Nous reviendrons plus tard aux données de taille de zooplancton qui sont déjà prêtes à être analysées.
+Nous allons tout d'abord créer une table synthétique qui combine les données de captures et de types de fragments forestiers. Notre objectif est de créer une table où on retrouve comme information :
+
+- le nombre d'espèces capturées par fragment
+- le nombre de captures par fragment
+- la superficie du fragment
+- le type de fragment
+
+Puisque nous avons 80 fragments, nous nous attendons à ce que cette table soit de 80 lignes de longueur puisque nous avons 1 mesure par fragment forestier.
 
 Nous allons en premier lieu calculer le nombre de captures par fragment forestier en utilisant la fonction `aggregate()`. L'argument `FUN = length` réfère à la fonction qui est utilisée pour faire le calcul à travers les fragments.
 ```{r}
@@ -156,6 +156,9 @@ nbr_especes <- aggregate(
     FUN = length
 )
 names(nbr_especes)  <- c("fragment", "nbr_especes")
+
+nbr_especes
+
 ```
 
 Finalement, la dernière étape consiste à combiner les données que nous avons créé pour avoir une table synthétique prête à être utilisée pour nos analyses.
@@ -177,59 +180,292 @@ La table consiste en une liste de 80 fragments forestiers issus de forêts matur
 
 
 
-# Comparer des moyennes
+# Exploration de données
 
-Nous allons revenir à notre table de zooplancton et l'utiliser pour comparer les moyennes. Rappelez-vous que dans cette table, nous avons échantillonné du zooplancton à travers 4 lacs et mesuré individuellement la taille des zooplanctons.
+L'exploration de données est une étape importante du cycle d'un projet d'analyse de données car elle nous permet de bien comprendre la structure de nos données ainsi que ses attributs.
 
-La première question qu'on peut se poser est de savoir quelle est la moyenne de notre échantillon pour l'ensemble des lacs?
+
+## Structure de la table de données
+
+Commençons par vérifier les informations de base de notre table
 ```{r}
-mean(donnees_zoo$taille)
+str(data_final)
 ```
 
-Qu'en est-il de la taille de nos zooplanctons par lac? Voyons-voir :
+Vérifions ensuite un sommaire des données
+```{r}
+summary(data_final)
+```
+
+
+## Visualisation des données
+
+Une des étapes clés lorsqu'il est temps d'explorer nos données est de produire des figures pour décrire nos variables. Ici, notre variable d'intérêt est le nombre d'espèces trouvées. Puisque nous nous intéressons à savoir si le nombre d'espèces varie entre les types de forêt, nous allons produire des figures pour chaque type afin de les comparer visuellement.
+
+Nous allons ainsi visualiser la distribution du nombre d'espèces dans nos fragments forestiers à l'aide d'histogrammes.
+
+```{r fig.width = 12, fig.length = 6}
+labels <- labeller(
+  variable =
+  c("partielle" = "Forêt à coupe partielle",
+    "totale" = "Forêt à coupe totale",
+    "mature" = "Forêt mature")
+)
+
+labels <- c(
+    "partielle" = "Forêt à coupe partielle",
+    "totale" = "Forêt à coupe totale",
+    "mature" = "Forêt mature"
+)
+
+fig <- ggplot(data = data_final, aes(x = nbr_especes)) +
+  geom_histogram(col = "black", fill = "gray", bins = 10) +
+  xlab("\nNombre d'espèces") +
+  ylab("Fréquence\n") +
+  scale_x_continuous(breaks = seq(0, 12, 2)) +
+  #facet_grid(~ type, labeller = labels) +
+  facet_wrap(~ type, labeller = as_labeller(labels)) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12))
+
+fig
+```
+
+On voit que la distribution du nombre d'espèces varie d'un type de forêt à l'autre.
+
+Une manière de décrire la distribution de nos données est aussi d'utiliser une mesure de tendance centrale comme la moyenne. Nous avons déjà vu que la distribution du nombre d'espèce varie d'une forêt à l'autre, mais qu'en est-il de leur moyenne? Voyons voir.
+
+On commence par vérifier la moyenne de tous les échantillons confondus.
+```{r}
+mean(data_final$nbr_especes)
+```
+
+Qu'en est-il de la moyenne par type de forêt?
 ```{r}
 aggregate(
-  taille ~ lac,
-  data = donnees_zoo,
+  nbr_especes ~ type,
+  data = data_final,
   FUN = mean
 )
 ```
 
-Rapidement, il semble que nos moyennes diffèrent. Par contre, pour confirmer que cela est le cas, il va falloir le tester "statistiquement". La méthode la + simple et connue est le test de Student.
-
-## Comparaison de moyenne à une valeur théorique
-
-Commençons par une comparaison de moyenne à une valeur théorique. Ici, on assume que la moyenne théorique est de 1000 um, et on compare la taille globale de tous nos lacs pour voir si elle est inférieure ou supérieure à la valeur moyenne théorique.
-
-```{r}
-t.test(donnees_zoo$taille, mu = 1000)
-
-# En prenant seulement 1 lac parmi les 4
-t.test(
-    donnees_zoo[donnees_zoo$lac == "labrecque", ]$taille,
-    mu = 1000
-)
-```
-
-On voit que nos tailles d'effet sont très grandes et nos valeurs p sont très petites. On peut donc affirmer avec certitude que nos moyennes sont effectivements différentes à cette valeur. Dans notre cas, la moyenne est inférieure.
-
-
-## Comparaison de moyenne entre 2 échantillons indépendants
-
-Ici, on compare deux des lacs échantillonnés. On assume que les variances sont égales (même si ici, ce n'est pas le cas)
-```{r}
-t.test(
-    donnees_zoo[donnees_zoo$lac == "labrecque",]$taille,
-    donnees_zoo[donnees_zoo$lac == "cerne",]$taille,
-    var.equal = TRUE, paired = FALSE
-)
-```
-
-Pour être honnête, les tests de Student sont très vieux et il existe des méthodes beaucoup plus élégantes et robustes pour comparer des moyennes. Toutefois, il faut un début à tout et vous savez maintenant comment facilement et rapidement comparer des moyennes.
+Rapidement, il semble que nos moyennes diffèrent par rapport à la forêt à coupe totale. Par contre, pour confirmer que cela est le cas, il va falloir le tester "statistiquement". Nous allons voir comment faire cela dans la prochaine section.
 
 <br>
 
 
 
 
-# L'analyse de variance
+# L'analyse de variance (ANOVA)
+
+L'analyse de variance est une méthode de choix lorsqu'il s'agit de répondre à une question scientifique comme la nôtre. Rappelez-vous qu'on s'intéresse à savoir si le nombre d'espèces qu'on trouve diffèrent entre différents types de forêts. Si on observe des différences, il est possible de supposer que le type de forêt influence le nombre d'espèces qu'on y retrouve, mais il faut faire attention pour ne pas établir de liens de causalité.
+
+Avant de procéder à notre analyse, il est important de connaître les étapes clés lorsqu'on fait un modèle linéaire, étant de :
+
+1. produire le modèle
+2. vérifier les postulats (suppositions) de base
+
+si l'étape 2 échoue, on retourne à 1 et on ajuste le modèle
+
+3. Quand on réussi l'étape 2, on produit la table des estimés
+4. produire un graphique 
+
+Ces étapes devraient être faites dans cet ordre et répétées autant que nécessaire jusqu'à ce qu'on soit confiant que notre modèle est juste et qu'il nous donne une information qui fait du sens scientifiquement.
+
+
+## Produire le modèle
+
+Nous commençons par produire le modèle en utilisant la fonction `lm()`, pour "linear model". Rappelez-vous que l'ANOVA fait partie de la grande famille des modèles linéaires, qui inclus la régression.
+
+```{r}
+# Avant tout, il faut que la colone "type" soit un facteur
+data_final$type <- as.factor(data_final$type)
+
+# Comme l'anova est un modèle linéaire, on utilise la fonction "lm()"
+modele <- lm(nbr_especes ~ type, data = data_final)
+```
+
+
+## Vérifier les postulats de base
+
+Les vérifications pour le respect des postulats de base se font de manière visuelle. Il existe des méthodes statistiques pour vérifier les postulats, mais la méthode graphique est largement supérieure car elle est + nuancée.
+
+La première condition est que les données sont indépendantes. Il n'y a pas de vérification visuelle pour cela et vous devez normalement en tenir compte selon votre design expérimental. Les autres conditions vont comme suit:
+
+on vérifie la distribution des résidus pour s'assurer qu'elle est Gaussienne (normale).
+
+```{r}
+# On extrait les résidus
+residus <- resid(modele)
+
+# Vérifier la normalité des résidus
+hist(
+  residus,
+  xlab = "Résidus du modèle",
+  ylab = "Nombre d'observations",
+  main = "", col = "darkgray", cex.lab = 1.5
+)
+```
+
+On s'assure ensuite que nos variances intra-groupe sont homogènes. Cela veut dire qu'on veut que les résidus pour chaque groupe soient distribués de façon homogène, ou encore juste que les résidus soient environ pareils à travers les groupes. 
+
+```{r}
+boxplot(
+  residus ~ data_final$type,
+  ylab = "Résidus du modèle",
+  xlab = "Type de forêt",
+  col = "darkgray"
+)
+```
+
+
+## Produire la table des estimés
+
+Une autre chose qu'on faire pour commencer est de visualiser la table d'ANOVA du modèle. On voit que la valeur de notre test de F est assez élevée et la valeur p est basse, indiquant qu'il existe au moins une différence entre deux types de forêts dans leur nombre d'espèces.
+
+```{r}
+anova(modele)
+```
+
+Une autre méthode est de visualiser le sommaire du modèle linéaire avec la fonction `summary()`. Cette fonction va nous retourner la valeur des coefficients prédits par le modèle, nous permettant de savoir s'il existe des différences dans le nombre d'espèces entre nos types de forêts.
+
+```{r}
+summary(modele)
+```
+
+Ici, les informations les + importantes sont les estimés (`Estimate`), le test de T (`t value`), et le R2 ajusté.
+
+Lorsqu'on fait un modèle de type ANOVA et qu'on utilise `summary()`, la première ligne de la table (`Intercept`) nous indique la le nombre d'espèces moyen prédit par notre modèle pour le groupe de référence, ici étant la forêt mature. Les autres valeurs correspondent à la différence par rapport au groupe de référence. Ainsi, la valeur de `-0.1543` pour la forêt à coupe partielle indique que celle-ci a `-0.1543` espèces par rapport à la forêt mature, soit, `6.8065 - 0.1543 = 6.6522` espèces.
+
+Les tests de T nous indiquent si la valeur moyenne estimée diffère de 0 pour le groupe de référence (forêt mature), alors que pour les autres, c'est si la différence est significativement différente de 0. En soi, le test de T n'est pas très informatif car il ne fait pas de comparaison entre les groupes.
+
+Le R carré donne une information cruciale car ici, il nous indique que 19% de la variation dans le nombre d'espèces échantillonné est expliquée par le type de forêt. Ça veut dire que le type de forêt à lui seul est un facteur de haute importance pour expliquer la distribution des espèces.
+
+
+## Tests post-hoc
+
+On peut finalement directement comparer les moyennes entre nos types de forêt pour savoir exactement où se trouvent les différences. On utilise typiquement des test de Tukey pour faire ça.
+
+```{r}
+TukeyHSD(aov(modele), ordered = TRUE)
+```
+
+Une bien meilleure façon est de faire des simulations avec du bootstrapping où on produis 1000x notre modèle et qu'on extrait l'information.
+
+```{r}
+# Définir une fonction pour produire le modèle et extraire les moyennes
+fit_and_extract_means <- function(data, indices) {
+  sampled_data <- data_final[indices, ]
+  model <- lm(nbr_especes ~ type, data = sampled_data)
+  means <- tapply(predict(model), sampled_data$type, mean)
+  return(means)
+}
+
+# Nombre de simulations
+n_replicates <- 1000
+
+# Faire le bootstrapping
+set.seed(123) # pour reproduire les résultats chaque fois
+boot_results <- boot(
+  data_final[, c(3, 5)],
+  fit_and_extract_means,
+  R = n_replicates
+)
+
+# Extraire les résultats du bootstrap
+# c'est une matrice à 3 colones où chaque colone représente un milieu
+# On a donc 1000 moyennes simulées par type de forêt
+bootstrap_matrix <- boot_results$t
+
+# On calcule la moyenne et les intervalles de confiance à 95%
+# pour chaque type de forêt
+means <- colMeans(bootstrap_matrix)
+ci_low <- apply(bootstrap_matrix, 2, function(x) quantile(x, 0.025))
+ci_high <- apply(bootstrap_matrix, 2, function(x) quantile(x, 0.975))
+
+# On produit une table de données pour montrer les résultats
+results_df <- data.frame(
+  type = levels(data_final$type),
+  mean = means,
+  ci_low = ci_low,
+  ci_high = ci_high
+)
+
+# Create a forest plot
+ggplot(results_df, aes(x = type, y = mean)) +
+  geom_pointrange(
+    aes(ymin = ci_low, ymax = ci_high),
+    size = 0.8,
+    position = position_dodge(width = 0.3)
+  ) +
+  scale_y_continuous(breaks = seq(0, 8, 2), limits = c(0, 8)) +
+  labs(x = "\nNombre d'espèces moyen",
+       y = "Type de forêt\n") +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12))
+```
+
+## Produire le graphique
+
+Le graphique que nous avons utilisé précédemment aurait été parfait pour représenter notre modèle. Toutefois, puisqu'il y a peu de chances que vous fassiez des "bootstrap", une version simplifié pourrait être de calculer les moyennes prédites par votre modèle pour chaque type de forêt, et faire le graphique des prédictions avec l'erreur. Voici un exemple.
+
+On commence par préparer une table de données pour produire notre graphique. Il s'agit tout d'abord de recréer un jeu de données et d'extraire ensuite les prédictions du modèle pour chaque type de forêt.
+
+```{r}
+# Jeu de données à partir des données originales
+new_dat <- data.frame(type = levels(data_final$type))
+
+# Matrice des coefficients du modèle
+mm <- model.matrix(
+  ~ type,
+  new_dat
+)
+
+# Estimer les valeur prédites pour chaque forêt
+fitted_values <- mm %*% coef(modele)
+
+# Calculer les intervalles de confiance
+pvar <- diag(mm %*% tcrossprod(vcov(modele), mm))
+tvar <- pvar + var(resid(modele))
+```
+
+On peut ensuite générer une table avec la moyennne et les intervalles de confiance pour chaque type de forêt, et on utilise cette table pour faire notre graphique. Comme vous pouvez voir, ça nous donne exactement le même graphique que tout à l'heure. Toutefois, celui-ci provient directement des coefficients de notre modèle avec son erreur, sans qu'on aille simulé quoi que ce soit.
+
+```{r}
+# Générer une table pour produire facilement le graphique
+table <- data.frame(
+  type = new_dat$type,
+  nmbr = fitted_values,
+  lower = fitted_values - 1.96 * sqrt(pvar),
+  upper = fitted_values + 1.96 * sqrt(pvar)
+)
+
+# Produire le graphique des prédictions
+ggplot(table, aes(x = type, y = nmbr)) +
+  geom_pointrange(
+    aes(ymin = lower, ymax = upper),
+    size = 0.8,
+    position = position_dodge(width = 0.3)
+  ) +
+  scale_y_continuous(breaks = seq(0, 8, 2), limits = c(0, 8)) +
+  xlab("\nType de forêt") +
+  ylab("Nombre d'espèces moyen prédit\n") +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(size = 12)
+  )
+```
+
+Finalement, une méthode encore + simple que vous pouvez utiliser est de produire un diagramme en boîte à moustaches de vos données bruts. Cependant, il est à noter que cette représentation visuelle est sur les données bruts, et elle ne contient donc pas toute l'information que notre modèle contenait. C'est toutefois la méthode la plus simple et directe de représenter nos données.
+
+```{r}
+boxplot(
+  nbr_especes ~ type,
+  xlab = "Type de forêt",
+  ylab = "Nombre d'espèces moyen prédit",
+  data = data_final
+)
+```
