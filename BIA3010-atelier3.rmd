@@ -55,7 +55,6 @@ Pour initier notre session de programmation dans R, il nous faudra faire 2 étap
 
 Voici les librairies que nous utiliserons:
 
-- Package [`lme4`](https://cran.r-project.org/web/packages/lme4/index.html) pour des modèles linéaires (ANOVA, ANCOVA, modèles mixtes, etc.) "classiques"
 - Package [`ggplot2`](https://ggplot2.tidyverse.org/) pour faire de magnifiques graphiques
 - Package [`boot`](https://cran.r-project.org/web/packages/boot/boot.pdf) pour faire des simulations
 
@@ -63,7 +62,7 @@ Chargons donc nos librairies. Si vous ne les avez pas installées, vous devez to
 ```{r}
 
 # Définir le vecteur des librairies à charger
-packages <- c("lme4", "ggplot2", "boot")
+packages <- c("ggplot2", "boot")
 
 # Charger toutes les librairies d'un coup
 lapply(packages, library, character.only = TRUE)
@@ -84,15 +83,18 @@ Nous allons travailler avec deux bases de données différentes. La première co
 - des fragments dans des forêts ou il y a eu coupe totale
 
 ```{r}
+# Préparons le chemin vers nos données
+chemin <- file.path(getwd(), "2-Data")
+
 # Données de capture d'espèces dans différents fragments
 donnees_capture <- read.table(
-    file = "./data/donnees-captures.csv",
+    file = file.path(chemin, "donnees-captures.csv"),
     header = TRUE, sep = ";", dec = "."
 )
 
 # Données de superficie de fragments forestiers selon le type de forêt
 donnees_fragments <- read.table(
-    file = "./data/donnees-fragments.csv",
+    file = file.path(chemin, "donnees-fragments.csv"),
     header = TRUE, sep = ";", dec = "."
 )
 ```
