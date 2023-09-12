@@ -1,0 +1,460 @@
+---
+title: Séries d'ateliers R - UQAM - BIA3010
+subtitle: Atelier 4 - ANOVA à 2 facteurs et ANCOVA
+author:
+  - name: | 
+        Maxime Fraser Franco : 
+    affiliation: Département des Sciences Biologiques & Centre de la Science de la Biodiversité du Québec, Université du Québec à Montréal
+    email: fraser_franco.maxime@courrier.uqam.ca
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    highlight: zenburn
+    theme: flatly
+    df_print: paged
+    #code_folding: hide
+#bibliography: refs-MLMM.bib
+#nocite: |
+#  @McElreath2020
+#  @Burkner2017
+#  @Burkner2018
+#  @FraserFranco.etal2022
+#  @Piironen.Vehtari2017
+#  @aczelDiscussionPointsBayesian2020
+#  @kruschkeBayesianAnalysisReporting2021
+#  @Vehtari.etal2017
+---
+
+<br>
+
+# Sommaire
+
+Dans cet atelier, nous allons continuer pousser un peu plus loin nos horizons et découvrir deux méthodes qui constituent des extensions de l'ANOVA et la régression simple. Ces analyses sont:
+
+- L'analyse de variance à deux facteurs (two-way ANOVA)
+- L'analyse de covariance (ANCOVA)
+
+L'analyse de variance à deux facteurs est une extension de l'ANOVA et consiste ni plus ni moins en une ANOVA où l'on rajoute un deuxième facteur. Toutefois, nous allons nous intéresser avec cette méthode à vérifier s'il existe des interactions entre ces deux facteurs.
+
+L'analyse de covariance quant à elle peut être vue comme une combinaison d'une ANOVA et d'une régression. C'est donc un modèle où nous avons deux variables explicatives qui sont de type différent, soit, numérique et catégorique. En soit, elle permet donc de vérifier la relation entre y et x pour différents groupes. Nous verrons ceci un peu plus loin.
+
+**À noter**: le présent document est en format .html et a été généré avec [R Markdown](https://rmarkdown.rstudio.com/). C'est simplement une façon de générer des documents beaux pour expliquer du code. Ainsi, vous pouvez copier-coller le code de chaque cellule dans une session R sur votre ordinateur personnel et produire l'ensemble des analyses présentées dans le document.
+
+<br>
+
+
+
+
+# Préparer notre session
+
+Pour initier notre session de programmation dans R, il nous faudra faire 2 étapes essentielles. La première sera de charger les librairies nécessaires pour effectuer nos analyses, puis ensuite d'importer nos données dans la session pour commencer à les manipuler et les modéliser.
+
+
+## Charger les librairies
+
+Voici la librairie que nous utiliserons:
+
+- Package [`ggplot2`](https://ggplot2.tidyverse.org/) pour faire de magnifiques graphiques
+
+Chargons donc notre librairie. Si vous ne l'avez pas installée, vous devez tout dabord le faire en faisant la commande `install.packages("ggplot2")`.
+```{r}
+library("ggplot2")
+```
+
+
+## Importer les données
+
+Dépendemment de comment vous utilisez R, vous devrez tout d'abord peut-être devoir "set" votre working directory avec `setwd("votre/chemin/dans/windows/ou/mac")`
+
+Par contre, si vous travaillez à l'échelle du projet dans Rstudio comme nous avons vu à l'atelier 2, alors pas besoin de `setwd()`. Vous pourrez confirmer que vous êtes déjà dans le bon chemin (dossier) en faisant la commande `getwd()`.
+
+Nous allons travailler avec les mêmes bases de données qu'à l'atelier 3. 
+
+```{r}
+# Préparons le chemin vers nos données
+chemin <- file.path(getwd(), "2-Data")
+
+# Données de capture d'espèces dans différents fragments
+donnees_capture <- read.table(
+    file = file.path(chemin, "donnees-captures.csv"),
+    header = TRUE, sep = ";", dec = "."
+)
+
+# Données de superficie de fragments forestiers selon le type de forêt
+donnees_fragments <- read.table(
+    file = file.path(chemin, "donnees-fragments.csv"),
+    header = TRUE, sep = ";", dec = "."
+)
+```
+
+<br>
+
+
+
+
+# Préparer une table de données pour les analyses
+
+Encore une fois, nous devons organiser une table qui est la même qu'à l'atelier 3. Nous allons donc faire les étapes comme nous l'avons fait précédemment. Si vous avez besoin d'un rappel des opérations, référez-vous à l'atelier 3 où on explique chaque étape.
+```{r}
+nbr_captures <- aggregate(
+    donnees_capture$capture,
+    list(donnees_capture$fragment),
+    FUN = length
+)
+
+# On renomme les colones
+names(nbr_captures) <- c("fragment", "nbr_capture")
+```
+
+```{r}
+donnees_capture1 <- unique(donnees_capture)
+head(donnees_capture1)
+```
+
+```{r}
+nbr_especes <- aggregate(
+    donnees_capture1$capture,
+    by = list(donnees_capture1$fragment),
+    FUN = length
+)
+names(nbr_especes)  <- c("fragment", "nbr_especes")
+
+nbr_especes
+
+```
+
+```{r}
+nbrs <- merge(nbr_captures, nbr_especes, by = "fragment")
+data_final <- merge(donnees_fragments, nbrs, by = "fragment")
+```
+
+Visualisons notre table
+```{r}
+str(data_final)
+head(data_final)
+``` 
+
+Au dernier atelier, nous avons vu que l'abondance des espèces varie entre les différents types des forêt. Nous avons aussi vu que le type de forêt explique un pourcentage important de la variation dans les espèces trouvées (19%). De façon similaire, la superficie aussi était importante, et nous avons vu que plus la superficie des fragments augmentait, plus on y retrouvait d'espèces.
+
+Maintenant, nous pourrions penser plus loin et se demander si cette relation est la même d'un type de forêt à l'autre. Est-il possible que la relation entre le nombre d'espèces et la superficie chanque selon le type de forêt? C'est ce que nous allons voir. L'analyse de covariance sera une méthode de choix pour répondre à cette question car nous avons une variable catégorique (type de forêt) et une variable continue (superficie).
+
+<br>
+
+
+
+
+# Exploration de données
+
+Référez-vous à la section de l'atelier 3 pour ce qui est de la structure des données. Ici, nous allons faire une exploration un peu différente et regarder le nuage de points pour chaque type de forêt. Cela va déjà nous donner une idée de la relation entre le nombre d'espèces capturées et la superficie pour chaque type de forêt.
+
+
+## Visualisation des données
+
+Ici, notre variable d'intérêt est le nombre d'espèces trouvées que nous voulons mettre en relation avec la superficie des fragments pour chaque forêt. Nous allons produire des figures pour chaque type afin de les comparer visuellement.
+
+Nous allons visualiser la distribution des observations à l'aide de nuages de points.
+
+```{r fig.width = 12, fig.length = 6}
+labels <- c(
+    "partielle" = "Forêt à coupe partielle",
+    "totale" = "Forêt à coupe totale",
+    "mature" = "Forêt mature"
+)
+
+ggplot(data = data_final, aes(x = superficie, y = nbr_especes, color = type)) +
+  geom_point(shape = 19, size = 2.5) +
+  xlab("\nSuperficie des fragments") +
+  ylab("Nombre d'espèces\n") +
+  scale_x_continuous(breaks = seq(0, 800, 200), limits = c(0, 800)) +
+  scale_color_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  facet_wrap(~ type, labeller = as_labeller(labels)) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")
+```
+
+À première vue, il semble que la relation entre le nombre d'espèces et la superficie est similaire d'un type de forêt à l'autre. Encore une fois, pour confirmer que cela est le cas, nous allons le tester statistiquement.
+
+<br>
+
+
+
+
+# L'analyse de covariance (ANCOVA)
+
+Comme mentionné plus haut, l'analyse de covariance est une combinaison entre l'ANOVA et la régression car on cherche essentiellement à produire plusieurs régressions linéaires pour plusieurs niveaux d'un facteur. L'idée est donc de vérifier et comparer la relation entre y et x pour différents groupes. 
+
+Encore une fois, les étapes clés pour notre analyse seront de :
+
+**1.** Produire le modèle
+
+**2.** Vérifier les postulats (suppositions) de base
+
+si l'étape 2 échoue, on retourne à 1 et on ajuste le modèle
+
+**3.** Quand on réussi l'étape 2, on produit la table des estimés
+
+**4.** Produire un graphique
+
+
+## Produire le modèle
+
+Comme à l'atelier 3, nous allons produire le modèle en utilisant la fonction `glm()`, constituant une extension de la fonction `lm()`. Un glm, ou modèle linéaire généralisé, nous permet de spécifier la distribution des résidus. Ici, nous utilisons la distribution de Poisson car comme nous avons vu, nos données sont des comptes de type discret, et c'est une distribution typique qui est utilisée pour des données d'abondances ou de nombre d'espèces.
+
+À Noter que nous devons toujours coder les variables catégoriques en facteur. Nous devons aussi, comme lors de la régression simple, centrer et réduire (standardiser) notre superficie car si vous vous rappelez, une ordonnée à l'origine pour une superficie de 0 ne fait pas de sens. Ainsi, l'ordonnée à l'origine de chaque droite de régression sera estimée pour une superficie moyenne.
+
+```{r}
+# Avant tout, il faut que la colone "type" soit un facteur
+data_final$type <- as.factor(data_final$type)
+
+# Centrer et réduire la superficie
+data_final$superficie_cr <- scale(data_final$superficie)
+
+# Produire le modèle
+modele <- glm(
+    nbr_especes ~ type + superficie_cr + type:superficie_cr,
+    family = poisson(),
+    data = data_final
+)
+```
+
+Comme à l'atelier 3, nous avons un modèle qui inclus l'effet du `type` de forêt, mais on y ajoute l'effet de la `superficie_cr`.
+
+On voit aussi qu'il y a un nouvel élément dans la formule par rapport à ce que nous avons vu à l'atelier 3. En effet, vous voyez que notre formule contient l'élément `type:superficie_cr`. Ce terme désigne une interaction. En statistiques une interaction désigne un phénomène statistique où l'effet d'une variable x sur y dépend de l'effet d'une autre variable x. Lorsque cela se produit, les deux variables x sont donc en interaction. Toutefois, ce n'est pas parce que notre modèle inclus une interaction que celle-ci se produit nécessairement. L'ANCOVA va donc nous permettre de tester statistiquement si cela se produit.
+
+Pour vous donner un exemple concret par rapport à notre problème, la présence d'une interaction signifirait que la relation entre le `nbr_especes` et la `superficie_cr` varie d'un type de forêt à l'autre. Par exemple, si on voit une relation nulle pour la forêt mature et une relation fortement positive pour la forêt à coupe partielle, nous avons une interaction. Même chose si une des forêts a une relation positive et une autre a une relation négative.
+
+
+## Vérifier les postulats de base
+
+Puisque nous travaillons avec un glm et la famille de distribution de Poisson, nous n,avons plus besoin de vérifier que nos résidus sont distribués de façon Gaussienne (normale). Toutefois, il est toujours primordial que la condition d'indépendance soit respectée, comme dans tout design expérimental.
+
+Commençons par extraire nos résidus et les valeurs prédites et les assigner à deux nouvelles colones dans notre table `data_final`.
+
+```{r}
+# On extrait les résidus
+data_final$residus <- resid(modele)
+data_final$predictions <- fitted(modele)
+```
+
+Comme à l'atelier 3, nous allons tout d'abord nous assurer les variances intra-groupe sont homogènes.
+
+```{r}
+ggplot(data = data_final, aes(x = type, y = residus, color = type)) +
+
+# On ajoute le boxplot
+  geom_boxplot() +
+
+# On ajoute les données bruts
+  geom_jitter(
+    shape = 16, size = 2.5,
+    position = position_jitter(0.2)
+  ) +
+
+# Paramètres graphiques
+  scale_color_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  xlab("\nType de forêt") +
+  ylab("Résidus du modèle\n") +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")
+```
+
+On voit que nos résidus se situent en majorité à l'intérieur des premiers écarts-types inférieurs et supérieurs. Les variances semblent donc assez homogènes malgré quelques observations plus aberrantes.
+
+Nous vérifions ensuite que les résidus sont distribués de façon homogène le long des prédictions pour l'ensemble du modèle.
+
+```{r}
+ggplot(
+    data = data_final,
+    aes(x = predictions, y = residus)
+) +
+  geom_point(size = 2.5, color = "black") +
+  geom_hline(
+    yintercept = 0, lty = "dashed",
+    linewidth = 1.5, color = "dodgerblue"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+  strip.text = element_text(size = 12))
+```
+
+Vérifions maintenant la même chose mais groupé par type de forêt.
+
+```{r fig.width = 12, fig.length = 6}
+ggplot(
+    data = data_final,
+    aes(x = predictions, y = residus, color = type)
+) +
+  geom_hline(
+      yintercept = 0, lty = "dashed",
+      linewidth = 1.5, color = "black"
+  ) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  xlab("Prédictions du modèle") +
+  ylab("Résidus du modèle") + 
+  facet_wrap(~ type, labeller = as_labeller(labels)) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")
+```
+
+Les résidus par rapport aux valeurs prédites demeurent assez homogènes autour de la droite. On continue.
+
+## Produire la table des estimés
+
+Nous sommes maintenant prêts à visualiser le sommaire du modèle linéaire avec la fonction `summary()`.
+
+```{r}
+summary(modele)
+```
+
+Puisqu'on travaille avec un glm, la sortie va nous donner quelque chose de différent. On ne peut donc pas directement savoir la valeur de notre R carré, et on remarque que le test pour évaluer si les estimés sont différents de 0 sont maintenant faits avec une valeur de z, et non un test de Student.
+
+De plus, sachant qu'on travaille avec un glm, on voit bien que l'estimé du nombre d'espèces moyen est inférieur à ce qu'on avait vu auparavant, étant 6.8. Ceci est normal car nous avons une fonction de lien qui est à l'échelle logarithmique lorsqu'on fait un glm avec Poisson. Si vous calculez l'expostant de l'ordonné à l'origine, vous verrez que `exp(1.91231) = 6.768706`. C'est donc important de se souvenir de la fonction de lien lorsqu'on interprète les résultats d'un glm.
+
+Autrement, le test de Z s'interprète de la même façon que le test de T avec un modèle linéaire classique. On voit donc que la coupe totale diffère encore une fois de la forêt mature. On remarque aussi que la superficie a un effet sur le nombre d'espèce, mais il semble que la relation ne varie pas d'un milieu à l'autre de façon importante. Il nous faudra faire un graphique pour visualiser cela.
+
+Finalement, comme la sortie du modèle ne nous donne pas de R carré, il faut la calculer nous-même. Les R2 pour les glm ne se calculent pas exactement de la même façon qu'avec un modèle de type lm. Ainsi, plusieurs méthodes ont été développées pour faire le calcul. Ici, nous allons utiliser l'approche de McFadden pour calculer notre pseudo R2. L'idée est d'utiliser le ratio de la déviance du modèle par rapport à la déviance nulle. La déviance du modèle ou déviance résiduelle correspond à l'objet `deviance` et nous indique l'ajustement de notre modèle, alors que la déviance nulle correspond à `null.deviance` et nous indique la déviance d'un modèle où il n'y a aucun prédicteur.
+
+```{r}
+with(summary(modele), 1 - deviance / null.deviance)
+```
+
+À la lumière de notre test, il apparaît que notre pseudo R2 est très grand, indiquant que notre modèle explique 59% de la variation dans le nombre d'espèces. C'est énorme pour une étude écologique.
+
+
+## Produire le graphique
+
+Voici un exemple d'une façon de produire un graphique d'une interaction.
+
+```{r}
+# Créer des nouvelles données
+new_dat <- expand.grid(
+    superficie_cr = seq(min(data_final$superficie_cr),
+                     max(data_final$superficie_cr),
+                    length = 100),
+    type = levels(data_final$type)
+)
+
+# Matrice des coefficients du modèle
+mm <- model.matrix(~ type + superficie_cr + type:superficie_cr, new_dat)
+
+# Valeur prédites
+fitted_values <- mm %*% coef(modele)
+
+# Produire les écarts pour avoir l'intervalle de confiance
+# + l'intervalle de prédiction
+pvar <- diag(mm %*% tcrossprod(vcov(modele), mm))
+tvar <- pvar + var(resid(modele))
+
+# Générer une table pour produire facilement le graphique
+table <- data.frame(
+  superficie_cr = new_dat$superficie_cr,
+  predites = exp(fitted_values),
+  lower_ci = exp(fitted_values - 1.96 * sqrt(pvar)),
+  upper_ci = exp(fitted_values + 1.96 * sqrt(pvar)),
+  lower_pi = exp(fitted_values - 1.96 * sqrt(tvar)),
+  upper_pi = exp(fitted_values + 1.96 * sqrt(tvar))
+)
+
+# On ajoute le facteur type
+table$type <- rep(
+    c("mature", "partielle", "totale"),
+    each = 100
+)
+```
+
+On peut maintenant produire le graphique. Le code est gros mais il s'agit simplement d'ajouter des couches pour chaque information dans notre table de données.
+
+```{r}
+
+# Produire le graphique de la régression pour chaque forêt
+ggplot(
+    data = table,
+    aes(x = superficie_cr, y = predites, fill = type)
+) +
+
+  # Les observations
+  geom_point(
+    data = data_final,
+    aes(x = superficie_cr, y = nbr_especes,
+        fill = type, color = type),
+    shape = 16, size = 2.5,
+    inherit.aes = FALSE
+  ) +
+
+  # Les droites de la régression
+  geom_line(aes(color = type), linewidth = 0.8) +
+
+  # Intervalles de confiance
+  geom_ribbon(
+    aes(x = superficie_cr,
+        ymin = lower_ci,
+        ymax = upper_ci),
+    alpha = 0.2
+  ) +
+
+  # Paramètres graphiques
+  scale_color_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  scale_fill_manual(values = c("#999999", "#E69F00", "#56B4E9")) +
+  xlab("\nSuperficie normalisée") +
+  ylab("Nombre d'espèces\n") +
+  labs(fill = "Type de forêt", color = "Type de forêt") +
+  scale_x_continuous(breaks = seq(-2, 3, 1)) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        strip.text = element_text(size = 12))
+```
+
+On voit que généralement, la relation entre le nombre d'espèces capturées et la superficie des fragments forestiers est positive pour les trois types de forêts. On ne peut donc pas affirmer que cette relation varie statistiquement d'une forêt à l'autre à la lumière des paramètres de notre modèle ainsi que de notre graphique.
+
+À la lumière de cette information, on pourrait déduire que d'incorporer l'interaction n'explique pas + de variation dans nos données que lorsqu'on a fait l'ANOVA ou la régression simple à l'atelier 3. Nous allons voir dans la prochaine section ce que l'on peut faire lorsque ceci se produit.
+
+<br>
+
+
+
+
+# Sélection de modèle
+
+Une approche que l'on pourrait utiliser pour évaluer si incorporer un paramètre est nécessaire est de faire une sélection de modèle par AIC/BIC. L'AIC, ou critère d'information de Aikake, nous permet à partir d'une série de modèles de sélectionner celui qui maximise l'explication de la variation dans nos données, tout en minimisant le nombre de paramètres nécessaires. Cette minimisation fait référence au principe de parcimonie. On veut donc un modèle qui maximise l'explication tout en minimisant le nombre de paramètres à estimer. Le modèle ayant le plus petit AIC sera donc le meilleur modèle et celui que l'on peut utiliser pour faire nos inférences. Voyons voir cela.
+
+Commencer par produire une série de modèles candidats. Le premier est celui que nous avons fait. Les autres modèles sont des versions moins complexes, avec les deux derniers étant ceux que nous avons fait à l'atelier 3, mais en format glm.
+
+```{r}
+mod1 <- modele
+
+mod2 <- glm(
+    nbr_especes ~ type + superficie_cr,
+    family = poisson(),
+    data = data_final
+)
+
+mod3 <- glm(
+    nbr_especes ~ type,
+    family = poisson(),
+    data = data_final
+)
+
+mod4 <- glm(
+    nbr_especes ~ superficie_cr,
+    family = poisson(),
+    data = data_final
+)
+
+aic_tab <- AIC(mod1, mod2, mod3, mod4)
+
+aic_tab[order(aic_tab$AIC), ]
+```
+
+À la lumière de notre test d'AIC, il paraît que le modèle avec les 2 effets additifs de superficie et type de forêt est le meilleur des 4. On pourrait donc utiliser ce modèle pour présenter nos résultats et laisser tomber les trois autres.
+
+En somme, le test d'AIC nous indique que le modèle 2 est le meilleur pour expliquer nos données. On peut déduire donc que les effets du type de forêt et de la superficie influencent le nombre d'espèces de façon indépendante et n'interagissent donc pas. 
