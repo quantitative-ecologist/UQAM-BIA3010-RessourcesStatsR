@@ -708,3 +708,9 @@ ggplot(table) +
 #ggexport(graphique_regression, filename = "figure_regression.png",
 #         width = 1500, height = 1500, res = 300)
 ```
+
+**NOTE IMPORTANTE**
+
+Prenez maintenant le temps en groupe de visualiser le graphique. Gross-modo, notre modèle est bon, mais il semble y avoir quelque chose qui cloche. Rappelez-vous que nous modélisons des nombres d'espèces, et que ce sont des données de type discrètes. Ces données varient donc de 0 à l'infini, mais seront toujours de nature 1, 2, 3, etc., et donc, sans décimales.
+
+Si vous avez identifié le problème, vous vous posez sûrement la question à savoir, mais quoi faire? Nous verrons comment faire au prochain atelier, en utilisant les modèles linéaires généralisés (GLM).
