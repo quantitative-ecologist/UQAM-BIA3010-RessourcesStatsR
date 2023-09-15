@@ -1,0 +1,592 @@
+---
+title: "Analyses multivariées"
+author: "BIA-3010 ÉTÉ 2023"
+date: "15/09/2023 - Hélène Dion-Phénix, Laurie Auclair et Jocelyn Lauzon"
+output: html_document
+---
+<br>
+
+# Analyses multivariées - quelques bases!
+
+## Que sont les analyses multivariées?
+
+On utilise les analyses multivariées pour tester des prédictions dont la variable réponse (y) est composée de plusieurs vecteurs de données (plusieurs colonnes d'une matrice). L'objectif de ce type d'analyse est de comprendre les relations et les motifs qui existent parmi plusieurs groupes de variables.
+
+Tout comme pour les statistiques univariées où on retrouve notamment les régressions linéaires, les tests de t, les ANOVAs, etc., il existe plusieurs types d'analyses multivariées. Dans ce document, nous en verrons seulement quelques-unes qui devraient vous permettre de tester la plupart de vos prédictions lorsque les analyses univariées ne sont pas suffisantes.
+
+<br>
+
+## Analyses multivariées sur R
+
+Un des package R couramment utilisé pour effectuer des tests sur des matrices de communauté est le package vegan (Jari et al. 2020). 
+
+```{r, message = FALSE, warning = FALSE}
+library(vegan)
+```
+<br>
+
+## Matrice de communauté
+
+En écologie, on utilise souvent des matrices de communauté: matrice d'abondance d'espèces végétales/animales/d'arthropodes, etc. ou matrice de présence-absence de ces espèces.
+
+La différence principale entre une matrice et un *dataframe* est que la matrice ne contient qu'une seule classe de donnée, tandis que le *dataframe* en contient souvent plusieurs. Les lignes correspondent aux **objets**: il s'agit de l'unité d'échantillonnage où vous avez échantillonné votre communauté (site, parcelle, quadrat, etc.).
+Les colonnes correspondent aux **descripteurs**: il s'agit de vos espèces (ou de vos familles, morphotypes, etc.). Dans chaque cellule, on retrouve l'abondance (nombre d'individus, recouvrement, etc.) ou la présence-absence (0 ou 1) de chaque espèce à chaque site.
+
+Voici quelques exemples de structures de matrices (Ovaskainen et al. 2017):
+
+<br>
+
+![](./fig/matrixfig.png)
+
+<br>
+
+Nous allons télécharger une base de données pour tester les différents types d'analyses. La base de données `varespec` décrit les recouvrements de différentes espèces de lichens dans des paturages (Väre et al. 1995).
+
+```{r}
+data(varespec)
+head(varespec)
+```
+<br>
+
+Ici, les sites ont été numérotés (nom des lignes) et les noms de colonnes correspondent aux noms scientifiques abrégés des espèces de lichens. L'information des cellules permet de connaître le recouvrement de chaque espèce à chaque site.
+
+<br>
+
+# Mettre vos données dans le bon format
+
+Pour pouvoir utiliser vos matrices de communauté, vous devez vous assurer que vos cellules contiennent uniquement des données d'abondance. Les noms de vos sites doivent donc être en nom de lignes et non représentés à la première colonne de votre tableau. Ainsi, votre *dataframe* sera une matrice. Vous pouvez aussi convertir votre *dataframe* en format "matrix", mais les deux objets sont équivalents s'ils contiennent seulement des données d'abondance.
+
+```{r}
+class(varespec)
+varesepc.matrix <- as.matrix(varespec)
+class(varesepc.matrix)
+```
+<br>
+
+Parfois, on aura besoin de remanipuler nos tableaux de données. Dans la librarie `picante`, la fonction `matrix2sample` convertit une matrice de communautés en un tableau de données format "long" (chaque ligne est une observation). La fonction `sample2matrix` fait le contraire.
+```{r, message = FALSE, warning = FALSE}
+library(picante)
+varespec_long <- matrix2sample(varespec)
+head(varespec_long)
+varespec <- sample2matrix(varespec_long)
+head(varespec)
+```
+<br>
+
+De plus, les données d'abondances peuvent aussi être transformées en données binaires (présence-absence).
+La fonction `decostand` de la librairie `vegan` permet de standardiser et de transformer les données compositionnelles de communautés. Nous reviendrons à cette fonction plus loin...
+```{r}
+varespec.pa <- decostand(varesepc.matrix, method="pa")
+```
+<br>
+
+À partir d'une matrice de communauté, on peut aussi calculer des mesures de diversité alpha pour chaque site.
+```{r}
+richesse <- specnumber(varespec)
+shannon <- diversity(varespec, index = "shannon")
+# Mettre en tableau
+diversite <- cbind(richesse, shannon)
+head(diversite)
+```
+<br>
+
+On peut maintenant tester, par exemple, si les différentes mesures de diversité alpha diffèrent entre des groupes de communautés ou si elles sont corrélés à des variables environnementales, à un axe d'ordination (on y reviendra)... mais ça ce sont des analyses univariées...
+
+<br>
+
+# Questions nécessitant des analyses multivariées
+
+Trois questions de recherche fréquentes:
+
+Q1- Est-ce que les différences de composition en espèces dans vos sites sont associées à des gradients environnementaux?
+
+Q2- Est-ce que la composition en espèces diffère entre des groupes de sites? 
+
+Q3- Est-ce que deux matrices d'abondances aux mêmes sites (ex. arthropodes et plantes) sont corrélées?
+
+Différents types d'analyses existent pour différentes questions. Tout comme pour les statistiques univariées, vous devrez choisir le bon test (parmi toutes les méthodes qui existent) pour répondre à vos prédictions!
+ 
+Mais avant de répondre à nos questions, explorons visuellement nos données de composition des communautés! 
+
+<br>
+
+# Les ordinations
+
+Les ordinations sont très adaptées au analyses en écologie des communautés. Lorsqu'on s'intéresse à des communautés à différents sites, on est souvent intéressé à visualiser quels sites sont plus semblables ou plus différents en termes de composition en espèces. Pour ce faire, on utilise souvent les ordinations. 
+
+Nos **objets** (sites, parcelles) peuvent être positionnés dans un espace multidimensionnel en fonction de leur composition, où chaque axe (dimension) représente un **descripteur** (ex. une espèce). Dans cet espace multidimensionnel ellipsoïde, les sites situés plus proches l'un de l'autre sont plus similaires dans leur composition en espèces que les sites situés plus loin. 
+
+![Source : Michael W. Palmer; https://ordination.okstate.edu/overview.htm. Sur la figure, les points sont les objets (les sites) et les axes sur la figure du milieu sont les descripteurs (les espèces).](./fig/ordinations.png)
+
+Or, cet espace comporte autant de dimensions que de descripteurs (espèces) et il est très difficile de représenter ou de visualiser un espace à plus de 3 dimensions!
+
+--> L'ordination permet de trouver de nouveaux axes dans cet espace, qui nous permettront de visualiser l'étendue de la variance dans nos données compositionnelles (souvent avec les deux premiers nouveaux axes qui représente le plus grand pourcentage de variance). Ces nouveaux axes représentent une "combinaison de variables" (et non plus des espèces particulières). L'ordination permet de visualiser l'espace multidimensionel en 2D (espace réduit) et simplifie l'interprétation des données multivariées.
+
+Il existe différentes méthodes d'ordination, on vous en présente trois:
+
++ l'analyse de correspondance (CA);
+
++ l'analyse en composantes principales (PCA);
+
++ l'analyse en coordonnées principales (PCoA);
+
+ 
+<br>
+
+# CA : L'analyse de correspondance
+
+Les données qu'on fourni pour une CA sont sous forme de *matrice de communautés*, soit avec des **données d'abondances** brutes (sans pré-transformation) ou des **données binaires de présence-absence**.
+
+Pour faire une ordination de type CA, toutes les données doivent avoir la même unitée (être dans la même dimension physique) et ne pas contenir de données négatives, ni de NA.
+
+*L'analyse de correspondance est une méthode d'ordination appropriée pour analyser des jeux de données contenant des espèces à distribution unimodale (par ex. dont l'abondance suit une distribution normale le long d'un gradient environnemental).*
+
+Elle s'effectue en trois étapes, ici résumées :
+
+1- Conversion de la matrice d'abondance (données brutes) en matrice Q de contributions de Pearson (calcul des **distances Chi2** entre objets). La table de contribution de Pearson contient l'information pour ordonner les sites dans l'espace multidimensionnel.
+
+La distance de Chi2 exclut les **doubles zéros**, ces derniers sont souvent présents dans les données de communautés et peuvent poser problème. Avec la CA, si vous avez deux sites qui ne possèdent pas une espèce de lichens A, cette absence d'espèce A ne contribuera pas à la ressemblance entre les 2 sites (alors qu'une présence commune d'une espèce B aux 2 sites contribue à leur ressemblance).
+
+2- Décomposition de la table de contributions de Pearson en valeurs propres (eigenvalues) et en vecteurs propres (eigenvectors). Les vecteurs propres sont ce qui permet de réduire l'espace multidimensionnel en quelques axes qui expliquent le mieux la variation entre les sites.
+
+3- Visualisation en deux dimensions.
+
+**L'important à retenir c'est que la CA calcule des distances Chi-carré entre les objets (sites), et cette conversion permet de créer de nouveaux axes et de situer les sites et les espèces sur ces axes. La distance chi-carré élimine aussi le problème des doubles zéros.**
+
+## Faire une CA dans R
+
+Avec le package vegan, on peut utiliser la fonction `cca` pour calculer une ordination CA. Cette fonction exécute les étapes 1 et 2. 
+Le premier argument (le seul ici) est notre matrice d'abondance brute.
+```{r}
+ca.varespec<-cca(varespec)
+```
+
+Visualisons d'abord l'ordination en 2D, en créant un graphique **biplot** avec la fonction `plot` pour visualiser les **sites** et les **espèces** le long des deux premiers axes. (étape 3)
+Ensuite, inspectons en détails l'objet cca qu'on vient de créer,
+```{r}
+plot(ca.varespec)
+summary(ca.varespec)
+```
+<br>
+*Les ordinations CA et PCA sont des eigenanalysis : les résultats sont basés sur le calcul d'eigenvector et de eigenvalue. Chaque axe de l'ordination est le résultat de la mise à l'échelle d'un eigenvector (vecteur propre) et possède une eigenvalue (valeur propre) correspondant à la quantité de variance qu'elle explique.*
+
+**Proportion explained** : *Cette valeur représente, pour chaque axe, la proportion de la variance totale expliquée par les descripteurs dans l'ordination. Elle est calculée en divisant la valeur propre par l'inertie*
+--> Plus simplement, on peut dire qu'elle représente le **pourcentage de variation dans la composition des communautés qui est expliquée par un axe donné**.
+
+Ici, le premier axe explique 25% de la variation dans vos données, le deuxième 17%, etc. 
+
+"Cumulative proportion" : Proportion cumulative d'une axe donné et des précédents.
+
+Les axes 1 et 2 expliquent ensemble 42% de la variation dans nos données compositionnelles. 
+
+Les "**site scores**" et "**species scores**" correspondent aux coordonnées (position) des objets et des espèces sur les axes de l'ordination.
+
+Rappel : les axes ne représentent pas une variable biologique/écologique déterminée, mais peuvent être vu comme une "combinaison de variables". Contrairement à la PCA qui maximise la variance expliquée par le premier axe, **la CA maximise la correspondance entre les scores des sites et des espèces**. (Cela peut être très utile pour interpréter les relations entre espèces et sites). Le deuxième axe est perpendiculaire au 1er et calculé encore pour maximiser la correspondance entre les scores, et ainsi de suite... Les axes suivants sont orthogonaux entre eux (leur corrélation est nulle) et leur importance explicative de la variance va en diminuant.
+
+```{r}
+plot(ca.varespec)
+```
+
+En observant cette ordination, on peut voir par exemple que les sites 20 et 23 ou encore 9 et 10 sont similaires dans leur composition en espèce de lichens en comparaison au reste des sites. Les sites 5 et 28 sont très différents en comparaison des autres.
+
+L'espèce "icmaeric" par exemple, est plus abondante dans les sites qui sont proches dans l'ordination (6,13,7,5,14) que dans les sites plus loin (10,9,21,28).
+
+**Il ne s'agit toutefois pas d'un test statistique**. Les ordinations nous permettent de visualiser certaines tendances dans nos données. Ce n'est donc pas très approprié pour tester directement des hypothèses.
+
+De plus, lorsqu'on interprète un graphique d'ordination, on ne tient pas compte de la direction des axes (gauche-droite, haut-bas... pourrait être inversée), ni vraiment de leur échelle numérique.
+
+#### Scaling (quelques mots pour faciliter l'interprétation des graphiques, pour ceux que ça intéresse seulement)
+
+Les fonctions `summary` et `plot` effectuent un **scaling 2** par défaut. Ce type de scaling est approprié si on s'intéresse principalement à l'ordination/l'interrelation des espèces. Sur le biplot ("correlation biplot), la distance entre les espèces reflète approximativement leur distance chi-carré. Le scaling 2 conserve aussi la corrélation entre les espèces : sur le biplot, l'angle entre celles-ci représente leur corrélation (90° : aucune corrélation, 180° : forte corrélation négative). Une espèce proche d'un site est plus fréquent dans ce site qu'aux sites éloignées d'elle.
+
+Le **scaling 1** est pertinent lorsqu'on s'intéresse à l'ordination/l'interrelation des sites. Sur un biplot avec un scaling 1 ("distance biplot"), la distance entre les sites reflète approximativement leur distance chi-carré, mais l'angle entre les descripteurs (espèces) ne reflètent pas leur corrélation. Un site proche d'une espèce a une plus grande proportion de cette espèce que les sites éloignés d'elle.
+
+Dans les deux types de scaling, **les proportions de variance expliquées par les axes restent les mêmes**, mais les scores des sites et des espèces changent.
+
+```{r}
+summary(ca.varespec, scaling =1)
+```
+<br>
+
+```{r}
+par(mfrow = c(1, 2))
+plot(ca.varespec, scaling = 2, main = "biplot scaling 2" ) 
+plot(ca.varespec, scaling = 1, main = "biplot scaling 1" ) 
+```
+<br>
+
+Au final, la différence dans l'interprétation est assez subtile. L'avantage du scaling 2 (à part être le scaling par défaut!) permet de voir la corrélation entre espèces, ce qui peut donner des pistes de réflexions (mais pas des résultats statistiques!) quant aux dynamiques des communautés.
+
+<br>
+
+## Q1- Est-ce que les différences de composition en espèces dans vos sites sont associées à des gradients environnementaux?
+
+## La fonction envfit
+
+La fonction `envfit` permet de calculer la régression (et donc la corrélation) de variables environnementales, indépendamment les unes des autres, aux axes d'une ordination (par défaut aux deux premiers axes, mais peut être changé par argument *choices=c(X,X)*). Cette fonction peut nous aider à interpréter écologiquement le positionnement des sites et des espèces dans l'ordination.
+
+Pour l'exemple, nous allons télécharger des données environnementales de caractéristiques du sol sur les sites associés aux données d'abondances de lichens
+```{r}
+data(varechem)
+head(varechem)
+```
+
+Attention! Vos variables environnementales ne sont souvent pas dans les mêmes dimensions physiques (unités). C'est donc une bonne idée de centrer et réduire nos variables environnementales pour pouvoir comparer les corrélations (même si envfit le fait automatiquement!).
+```{r}
+# centrer-réduire
+varechem <- scale(varechem)
+```
+
+Calculer les régressions.
+```{r}
+(envfit.ca <- envfit(ca.varespec, varechem))
+```
+Pour chaque variable environnementale :
+
++ les valeurs **CA1 et CA2** représentent la *direction des vecteurs* le long des deux axes de l'ordination
+
++ le **r2** donne la *force de la corrélation* entre les variables environnementales et les deux axes spécifiés de l'ordination
+
++ la **valeur P** [Pr(>r)] donne la *signification statistique* (déterminée par permutation, donc change à chq fois qu'on la calcule).
+
+Il est aussi possible de visualiser les résultats statistiques du tableau, en incorporant les vecteurs des gradients environnementaux sur vos ordinations!
+
+*Mais avant, attention. Encore une fois, par défaut, la fonction `envfit` utilise un scaling 2. Si vous avez choisi de faire un scaling 1 pour votre biplot, il faut aussi faire les tests envfit avec ce type de scaling (mettre en argument à l'étape ci-haut; *scaling=X*).*
+```{r}
+par(mfrow = c(1, 2))
+plot(ca.varespec, display = "sites")
+plot(envfit.ca)
+plot(ca.varespec)
+plot(envfit.ca, p.max = 0.05, col = "forestgreen") # Les correlations significatives apparaissent en vert
+```
+<br>
+
+Sur le biplot, la **longueur d'un vecteur** renseigne sur la *force de la corrélation (r2)* entre la variable environnementale et les axes de l'ordination, tandis que la **direction du vecteur** fait pointer celui-ci vers les *objets (sites) ayant des valeurs plus élevés* pour cette variable.
+
+Interprétation : Ici, on voit que les sites 3 et 4 ont une composition en espèces relativement similaire où on retrouve plus fréquemment l'espèce Flaniva, et dont le sol contient plus d'aluminium et de fer que les sites dans le quadrant en haut à droite.
+
+Attention, subtilité! Les variables dont la corrélation est forte *n'expliquent pas nécessairement la différence dans la composition en espèces de nos sites*, mais sont plutôt *associées à la variation extraite par les axes de l'ordination*. Les ordinations avec contraintes (ou canoniques) permettent par exemple de tester directement l'influence d'une matrice environnementale sur une matrice de commnautés; mais nous ne les aborderons pas ici.
+
+--> Dans le cadre de vos projets, la fonction `envfit` peut être très utile pour interpréter écologiquement les axes et les patrons d'ordination des sites et des espèces, émettre d'autres hypothèses, etc.
+
+Ce type de figure contient beaucoup d'informations et peut être difficile à interpréter. Mais il s'agit d'une bonne façon d'explorer et/ou de visualiser nos données. 
+
+<br>
+
+# PCA : L'analyse en composantes principales
+
+La PCA est une autre méthode d'ordination fréquemment utilisée.
+
+Comme la CA, les données qu'on fournit pour une PCA sont sous forme de *matrice de communautés*. La PCA peut être utilisée avec des **données d'abondance**, mais ce n'est pas la méthode la plus appropriée pour travailler avec des données de présence-absence.
+
+*La PCA assume une distribution linéaire des espèces le long d'un gradient.*
+
+Dans une PCA, le premier axe sera toujours calculé pour représenter la plus grande variation dans l'espace multidimensionnel (contrairement à la CA qui maximise la corrélation entre les coordonnées des sites et des espèces). Le deuxième axe est perpendiculaire au 1er et calculé encore pour maximiser la variance entre les points, et ainsi de suite... Les axes suivants sont orthogonaux entre eux (leur corrélation est nulle) et leur importance explicative de la variance va en diminuant (comme la CA).
+
+La PCA préserve la **distance euclidienne**. Mais pour éviter le problème des doubles zéros, on doit effectuer une **transformation Hellinger** sur les données. La **distance Hellinger** est donc la distance euclidienne calculée sur les données pré-transformées par Hellinger.
+
+De plus, cette méthode (distance hellinger) accorde moins d'importance aux espèces rares que la CA (distance chi-carré).
+
+## Faire une PCA dans R
+```{r}
+# Tranformation des données
+varespec.hel <- decostand(varespec, method="hellinger")
+# PCA
+pca.varespec <- rda(varespec.hel)
+summary(pca.varespec)
+```
+<br>
+
+Encore une fois, ce qui nous intéresse surtout ici c'est la proportion de la variance expliquée par chaque axe.
+
+À noter que les types de scaling 1 et 2 (défaut) suivent la même logique que dans la CA.
+
+*Dans la PCA, l'inertie représente la variance totale des données qui est expliquée par les descripteurs (les espèces) dans l'ordination. Comme pour la CA, la proportion de la variance expliquée par un axe correspond à sa valeur propre (variance totale des données expliquée par l'axe) divisé par l'inertie.*
+
+```{r}
+plot(pca.varespec)
+#OU
+biplot(pca.varespec)
+```
+<br>
+
+## envfit
+```{r}
+(envfit.pca <- envfit(pca.varespec, varechem))
+```
+
+```{r}
+plot(pca.varespec)
+plot(envfit.pca)
+plot(envfit.pca, p.max = 0.05, col = "red")
+```
+<br>
+
+## PCA sur données environnementales
+
+On peut aussi faire une PCA sur nos données environnementales (centrées-réduites) afin de déterminer les variables expliquant la plus grande variabilité dans l'*environnement* des sites. On peut regarder les scores des "espèces" (qui sont ici les facteurs environnementaux) ou le biplot.
+```{r}
+pca.varechem <- rda(varechem)
+summary(pca.varechem)
+plot(pca.varechem)
+```
+<br>
+
+## Extraire les scores des sites ou des espèces
+
+On peut aussi extraire les scores d'une composante principale pour transformer cet axe en nouvelle variable unique pouvant être utilisée dans un modèle linéaire. Cette nouvelle variable (ex. PC1) représente X % de la variance globale dans les conditions environnementales (ou dans la composition en espèces).
+
+La PCA est une méthode bien adaptée pour extraire les scores car ce type d'ordination maximise la variation expliquée par les axes, puis permet d'utiliser des variables avec différentes unités (si centrées-réduites).
+
+On pourrait par exemple vouloir extraire le score des sites de l'axe PC1 en une nouvelle variable représentant la variance globale dans les caractéristiques du sol ("car_sol"), pour ensuite tester la corrélation par régression à une autre variable (disons la diversité shannon en lichens des sites calculée précédemment; variable "diversite$shannon").
+
+Extraire les scores d'une PCA avec la fonction `scores`
+```{r}
+site.scores<-scores(pca.varechem, display="sites", choices=c(1,2)) # choices : les axes
+```
+
+On va maintenant faire une régression
+```{r}
+site.scores.df <- data.frame(site.scores)
+colnames(site.scores.df)[1] <- "car_sol_1"
+colnames(site.scores.df)[2] <- "car_sol_2"
+diversite.df <- data.frame(diversite)
+div.sol.1 <- lm(diversite.df$shannon ~ site.scores.df$car_sol_1)
+div.sol.2 <- lm(diversite.df$shannon ~ site.scores.df$car_sol_2)
+summary(div.sol.1)
+summary(div.sol.2)
+```
+<br>
+
+Conclusion? Si on se fie uniquement à la première composante principale extraite, les caractéristiques physico-chimiques du sol, prises dans leur ensemble, ne semblent par influencer la diversité (shannon) en espèces de lichens. Mais si on regarde la deuxième PC, il y a une corrélation entre caractéristiques générales du sol et diversité des lichens... On se souvient lors de l'envfit sur la PCA des communautés que les variables du sol qui étaient corrélées aux axes de l'ordination étaient Fe, Al, Humdepth, Mn, Ca, etc. Or dans cette PCA des variables du sol, ces variables semblent associées au gradient de la PC2...
+
+Autre exemple, on pourrait extraire les scores des sites sur un axe de PCA de communautés, pour tester la corrélation entre la variation globale dans la composition en arthropodes herbivores et le taux d'herbivorie. (Est-ce que le taux d'herbivorie est influencée par la composition en herbivores composent les communautés?)
+
+# PCoA : L'analyse en coordonnées principales
+
+La PCoA est une autre méthode d'ordination fréquemment utilisée. Elle se démarque surtout par la possibilité d'utiliser **n'importe quelle mesure de distance** au choix (ex. distance Bray-Curtis).
+
+Contrairement aux CA et PCA, on doit d'abord créer une **matrice de distance**, puis donner cette matrice de distance à la fonction pour que celle-ci exécute l'ordination.
+
+## Matrices de distance
+
+Les matrices de distance sont très utilisées en statistiques multivariées. On peut passer facilement d'une matrice d'abondance d'espèces à une matrice de distance. Le format d'une matrice de distance est différent puisque les lignes et les colonnes représentent les objets (sites) et les cellules contiennent l'information sur la différence (la distance) entre nos descripteurs pour chaque paire de sites. La matrice d'abondance est rectangulaire, mais la matrice de distance est carrée. Pour passer de l'une à l'autre, il faut calculer un indice de distance entre chaque paire de sites. Tout comme pour des indices de biodiversité, il existe plusieurs types de mesures de distance: distance euclidienne, distance de chord, distance d'Hellinger, distance de chi-carré, etc. Le choix de la bonne mesure est fonction de nos types de données et de nos questions. 
+
+### Matrice de distance hellinger
+
+Pour calculer la distance hellinger, il faut d'abord transformer nos données avec la fonction `decostand` vu précédemment.
+```{r}
+#La transformation Hellinger
+varespec.hellinger<-decostand(varespec, method="hellinger") 
+head(varespec)
+head(varespec.hellinger)
+```
+Mais on a toujours une matrice de communautés et non de distance.
+La fonction `vegdist` de vegan permet de créer une matrice de distance (ici euclidienne) à partir d'une matrice de communauté.
+```{r}
+varespec.hel <- vegdist(varespec.hellinger, method='euclid')
+```
+
+Ces deux étapes (transformation hellinger + matrice de distance euclidienne) peuvent être combinée en une seul ligne de code!
+```{r}
+varespec.hel <- vegdist(decostand(varespec, method='hellinger'), method='euclid')
+```
+
+Comparer le format des deux matrices. Noter que la matrice de distance est carrée, avec les sites à la fois en lignes et en colonnes.
+```{r}
+head(varespec)
+varespec.hel
+```
+<br>
+
+Ce n'est pas vraiment utile de faire une PCoA avec une matrice de distance hellinger ou de distance chi-carré, car cela revient pratiquement à faire un PCA ou un CA, respectivement.
+
+### Distance de Bray-Curtis
+
+Prenons avantage de la PCoA pour utiliser la distance de Bray-Curtis.
+```{r}
+varespec.bray <- vegdist(varespec, method='bray')
+```
+
+## Faire une PCoA dans R
+```{r}
+varespec.pcoa<-cmdscale(varespec.bray, k =(nrow(varespec) - 1), eig = TRUE)
+especes.wa <- wascores(varespec.pcoa$points[, 1:2], varespec) # Calculate weighted average projection of species
+```
+
+envfit
+```{r}
+(varespec.pcoa.env <- envfit(varespec.pcoa, varechem))
+```
+<br>
+
+Biplot
+```{r}
+ordiplot(scores(varespec.pcoa, choices = c(1, 2)), type = "t") # afficher sites
+abline(h = 0, lty = 3)
+abline(v = 0, lty = 3)
+text(especes.wa, rownames(especes.wa), cex = 0.7, col = "red") # afficher espèces
+plot(varespec.pcoa.env, p.max = 0.05, col = "forestgreen") # afficher résultats envfit
+```
+
+<br>
+
+# Résumé des différences entre les méthodes d'ordination
+
+Il peut être difficile de choisir quelle méthode d'ordination pour répondre à vos questions de recherche. De manière générale, pour le genre de données que vous avez récoltées, la CA et la PCA s'avèrent des méthodes très adaptées. Or, rien de mieux que de s'amuser à explorer et comparer les différentes méthodes! **L'important est surtout de bien comprendre ce que vous faites, et que votre interprétation écologique ait du sens vis à vis votre système biologique à l'étude et ce que vous voyez sur les graphiques d'ordination.**
+
+## CA
++ données : quantitatives d'abondances ou binaires (présence-absence); non-négatives; même unité pour chq variable
++ Les axes maximisent la correspondance entre les sites et les espèces
++ fonction : `cca` (librairie vegan)
++ input : matrice de communautés
++ distance : chi-carré
++ à utiliser si : On veut la meilleure correspondance entre nos scores de sites et d'espèces; nos données sont de type présence-absence; on veut donner plus de poids aux espèces rares (si on est confiant dans notre échantillonnage).
+
+## PCA
++ données : quantitatives d'abondances; permet des unités différentes entre variables (mais doivent être centrées-réduites).
++ Les axes maximisent la variation dans la composition.
++ fonction :`rda` (librairie vegan)
++ input : matrice de communautés
++ distance : euclidienne (mais pour régler prob de double-0, transformation Hellinger)
++ à utiliser si : On veut extraire les scores des sites ou des espèces en une nouvelle variable pour tester sa corrélation dans un modèle linéaire; on veut donner moins de poids aux espèces rares dans la distinction de nos communautés; nos données contiennent plus de sites que d'espèces (vs PCoA); on veut extraire le plus de variance possible avec nos axes.
+
+## PCoA
++ données : quantitatives, qualitatives, mixtes
++ fonction : `cmdscale` (librairie stats; base R)
++ input : matrice de distance
++ distance : au choix (ex. bray-curtis)
++ à utiliser si : Nos données contiennent plus d'espèces que de sites (vs. PCA); on veut utiliser une des nombreuses autres distances que euclidienne et chi-carré en fonction de nos données; on a des données qualitatives.
++ bray-curtis : ignore les double zéros; donne plus de poids aux espèces communes; affecté par la taille des échantillons (performe mieux avec faible diversité spécifique et petits échantillons).
+
+<br>
+
+# L'analyse permutationnelle de variance multivariées (PERMANOVA)
+
+## Q2- Tester si la composition en espèces diffère entre des groupes de sites?
+
+La PERMANOVA est l'analogue multivarié de l'ANOVA.
+Rappel sur l'ANOVA:
+
++ Elle est appropriée pour tester des hypothèses de structures écologiques complexes comme de la variabilité spatiale.
++ Les variances intra et intergroupes sont comparées pour fournir une statistique F.
++ L’hypothèse nulle stipule que la statistique F n’est pas significativement différente de 0, ce qui se traduit par une absence de différence entre les groupes. La signification de cette statistique est évaluée par comparaison à une distribution théorique. Elle est donc paramétrique.
+
+La PERMANOVA (Anderson, 2001):
+
++ Analyse de variance de données multivariées basée sur le calcul d'une pseudo-statistique F.
++ Test non paramétrique en testant la signification des pseudo-statistiques F par un test de permutations. 
++ La pseudo-statistique F est calculée d’après une matrice de distance. 
+
+**MAIS ATTENTION**:
+
++ Suppose l'indépendance des données
++ Est sensible aux différences de dispersion des points entre les groupes.
+
+Une différence significative entre groupe peut donc être due à une différence de position centrale (moyenne) ou à une différence de dispersion des points (variance). Pour départager ces deux effets, un test basé sur les distances d’homogénéité de dispersions multivariées peut être réalisé (Anderson, 2006). Nous y reviendrons.
+
+Pour cet exemple, nous allons utiliser les données `dune` (Jongman, 1995). Il s'agit de données de composition d'espèces végétales. Les données `dune.env` sont des données environnementales associées aux sites, notamment le type d'aménagement agricole ("Management"). Cette variable est un facteur à 4 niveaux.
+```{r}
+data(dune)
+data(dune.env)
+str(dune.env)
+```
+Nous pourrions faire la prédiction qu'il y a une différence en composition d'espèces végétales entre les différents aménagements agricoles. Nous allons effectuer une PERMANOVA pour tester cette prédiction.
+
+Si on repense à un nuage de points multidimensionnel où chaque point représente un site, on peut s'imaginer que chacun de nos groupes (ici l'aménagement), est constitué par un groupe de points. La PERMANOVA teste si le centroide de chaque groupe est différent en comparant la somme des distances entre chaque point et le centroide de son groupe avec la somme des distances entre chaque point et le centroide de tous nos sites; il s'agit de la pseudo-statistique F.
+
+Par contre, la pseudo-statistique F ne se calcule pas à partir d'une matrice d'abondance, mais à partir d'une matrice de distance ou de dissimilarité (comme l'indice de Bray-Curtis, par exemple).
+
+
+### Créer la matrice de dissimilarité
+
+```{r}
+dune.dist <- vegdist(decostand(dune, method='hellinger'), method='bray')
+```
+Ici, on a d'abord fait une transformation hellinger à la matrice d'abondance `dune`, puis on l'a converti en matrice de dissimilarité Bray-Curtis. La transformation hellinger est souvent appliquée aux données écologiques avant une PERMANOVA pour réduire l'impact des espèces rares et ainsi mieux interpréter les motifs généraux qui sont présents dans la communauté.
+
+La PERMANOVA teste si le centroide de chaque groupe est différent. Toutefois, il est aussi possible que certains groupes soient plus dispersés que d'autres autour de leur centroide. La PERMANOVA ne peut pas nous dire si la différence entre les groupes est causée par une différence de position des centroides ou par une différence de dispersion autour des centroides. Un autre test nous permet de tester pour des différences de dispersion...
+
+
+### Test des distances d’homogénéité de dispersions multivariées
+
+Nous allons utiliser la fonction betadisper de vegan pour tester si la variance multivariée est différence entre les groupes d'aménagement.
+```{r}
+disper.dune <- betadisper(dune.dist, dune.env$Management)
+anova(disper.dune) # pour effectuer un test de signification
+```
+L'hypothèse nulle est qu'il n'y a pas de différence de dispersion entre nos groupes et l'hypothèse alternative est qu'il y a une différence. Ici, comme la valeur P est supérieure à un seuil 0.05, on ne peut pas rejeter l'hypothèse nulle. Nos groupes sont donc suffisamment homogènes dans leur dispersion pour faire notre PERMANOVA.
+
+
+### Effectuer la PERMANOVA
+
+```{r}
+permanova.dune <- adonis2(dune.dist ~ Management, data = dune.env)
+permanova.dune
+```
+Donc, interprétons la sortie de la PERMANOVA. On peut voir que la pseudo-statistique F est de 2.737 et que cette valeur se retrouve à l'extrémité de notre distribution de pseudo-statistique F générée par permutation. Seul 0.3% des pseudo-statistiques F issues des permutations est plus grand que notre vraie pseudo-statistique. On peut donc dire que la composition végétale est significativement différente entre les différents types d'aménagement. De plus, le R2 nous dit que l'aménagement explique environ 34% de la variation en espèce entre nos sites.
+
+Une façon facile et pratique de visualiser nos groupes, ici aménagement, est d'utiliser la fonction plot() sur notre objet betadisper (modèle issu de la fonction disper()). Il s'agit du PCoA. Chaque point correspond à un site et la couleur varie selon l'aménagement. L'interprétation est similaire à ce qui est décrit plus haut avec les ordinations CA. Ici par exemple, on peut voir que la composition en espèce végétale dans les sites aménagés "NM" et "SF" semblent plus différents en comparaison aux autres paires de sites. Voir ce lien pour plus d'information sur cette fonction graphique et sur la façon de la modifier: https://fromthebottomoftheheap.net/2016/04/17/new-plot-default-for-betadisper/
+
+```{r}
+plot(disper.dune)
+```
+<br>
+
+# Tests procrustes
+
+## Q3- Est-ce que deux matrices d'abondances aux mêmes sites sont corrélées?
+
+Les deux matrices de communautés doivent contenir le **même nombre de lignes** (les sites), mais n'ont pas besoin d'avoir le même nombre de colonnes (les espèces).
+
+Faire une ordination du même type pour chacune de vos deux matrices de communautés.
+
+Le test Procruste superpose les deux ordinations. (Dans cet exemple, je fais le test pour comparer les ordinations de deux méthodes, la CA et la PCA sur le même jeu de données...)
+
+Attention! Il faut déterminer si la relation entre vos matrices est symétrique ou asymétrique. En d’autres mots, pensez-vous qu’une des communautés affecte l’autre? Si oui, la relation est asymétrique et vous mettrez la matrice X en premier dans la fonction, suivi de la matrice Y (la matrice X explique la matrice Y). Si votre hypothèse est par exemple que vos deux communautés sont affectées par les mêmes variables environnementales et donc qu’elles devraient être corrélées, la relation est symétrique. Vous devrez spécifier l’argument symmetric = TRUE dans la fonction `procrustes`.
+```{r}
+pro.ca.pca <- procrustes(ca.varespec, pca.varespec, symmetric = TRUE, scores="sites")
+pro.ca.pca
+plot(pro.ca.pca, kind = 1, type = "text")
+plot(pro.ca.pca, kind = 2)
+```
+<br>
+Vous visualisez l’ordination résultante : il y aura une ligne entre les paires de points correspondant au même site. Si les lignes sont petites, c’est que les ressemblances entre les sites en composition de la communauté 1 sont similaires aux ressemblances entre les sites en composition de la communauté 2.
+
+Test de signification avec la fonction `protest` pour vérifier si la corrélation entre les deux matrices est significative.
+```{r}
+protest(ca.varespec, pca.varespec, symmetric = T, scores = "sites", permutations = 999)
+```
+... et les deux ordinations sont corrélées!
+
+<br>
+
+Voilà! c'était un aperçu du vaste monde des statistiques multivariées! Amusez-vous, mais soyez prudents!
+
+<br>
+
+# Références:
+
+Anderson, M. J. (2001). A new method for non-parametric multivariate analysis of variance. Austral Ecology, 26 (1), 32–46. doi: 10.1080/13645700903062353
+
+Anderson, M. J. (2006). Distance-based tests for homogeneity of multivariate dispersions. Biometrics, 62 (1), 245‑253. doi: 10.1111/j.1541-0420.2005.00440.x
+
+Borcard, D., Gillet, F. et Legendre, P. (2018). Numerical Ecology with R (2nd Edition). Springer.
+
+Bourgeois, B., Giroux-Bougard, X., Winegardner, A., Chrétien, E., Granados, M. et Centre de la science de la biodiversité du Québec [CSBQ]. (2012). Atelier 9: Analyses multivariées. https://wiki.qcbs.ca/r_atelier9
+
+Jongman R.H., Ter Braak C.J.F. & van Tongeren O.F.R. (eds) (1995): Data analysis in community and landscape ecology. Cambridge University Press.
+
+Jari Oksanen, F. Guillaume Blanchet, Michael Friendly, Roeland Kindt, Pierre Legendre, Dan McGlinn, Peter R. Minchin, R. B. O'Hara, Gavin L. Simpson, Peter Solymos, M. Henry H. Stevens, Eduard Szoecs and Helene Wagner (2020). vegan: Community Ecology Package. R package version 2.5-7. https://CRAN.R-project.org/package=vegan
+
+Legendre, P., & Gallagher, E. D. (2001). Ecologically meaningful transformations for ordination of species data. Oecologia, 129, 271-280.
+
+Legendre, P., & Legendre, L. (1998). Numerical ecology (2nd Edition). Elsevier.
+
+Ovaskainen, O., Tikhonov, G., Norberg, A., Guillaume Blanchet, F., Duan, L., Dunson, D., Roslin, T., Abrego, N. (2017). How to make more out of community data? A conceptual framework and its implementation as models and software. Ecology Letters, 20(5), 561–576.
+
+Palmer, M. W. Ordination Methods - an overview (https://ordination.okstate.edu/overview.htm#Direct_gradient_analysis)
+
+Väre, H., Ohtonen, R. and Oksanen, J. (1995) Effects of reindeer grazing on understorey vegetation in dry Pinus sylvestris forests. Journal of Vegetation Science 6, 523--530.
+
+Zelený, D. (2022). Analysis of community ecology data in R. Common confusions and mistakes. https://www.davidzeleny.net/anadat-r/doku.php/en:confusions#:~:text=Hellinger%20transformation%20has%20therefore%20two,sensitive%20to%20double%2Dzero%20problem.
