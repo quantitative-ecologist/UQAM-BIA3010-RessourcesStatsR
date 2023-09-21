@@ -32,11 +32,21 @@ Un ensemble de ressources pour apprendre à faire des analyses statistiques avec
   - Atelier 6 :
     - matrices de communautés
     - analyse de correspondance (CA)
+    - analyse en composantes principales (PCA)
+    - analyse en coordonnées principales (PCoA)
     - EnvFit
+    - matrices de distance
     - PERMANOVA
     - tests Procrustes
 
 ### Visualisation
 - Atelier 7 :
   - Visualiser les résultats
-  - Produire de belles figures
+  - Produire de belles figures 
+  - ggplot
+  - ANOVA
+  - GLM binomiaux
+  - régression linéaire
+  - PCA
+  - CA
+  - PCoA
