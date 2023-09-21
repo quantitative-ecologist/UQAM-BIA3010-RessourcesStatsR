@@ -1,0 +1,1842 @@
+---
+title: "Visualisation des résultats : tableaux et graphiques"
+author: "Laurie Auclair, Jocelyn Lauzon & Sabrina Brisson"
+date: "10/09/2023"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br>
+
+# Importer les données
+```{r}
+library(datasets)
+data(iris)
+```
+
+<br>
+
+# Exploration de données
+
+Avant de débuter des analyses, il est important de se familisariser avec son
+jeu de données afin d'avoir une idée de sa structure. Cette étape permet
+d'identifier des motifs, des tendances ou des relations préalablement aux tests 
+statistiques, puis de vérifier la qualité des données. Elle permet aussi d'évaluer
+si les données ont besoin d'être transformées avant de procéder aux analyses.
+
+## Quelques fonctions de base
+
+Pour vérifier le nombre de lignes et de colonnes de votre *dataset*:
+```{r}
+dim(iris)
+```
+
+Pour voir les 6 premières lignes du jeu de données:
+```{r}
+head(iris)
+```
+
+Pour connaître le nom des colonnes:
+```{r}
+names(iris)
+```
+
+Pour vérifier la classe de chaque variable dans la table de données:
+```{r}
+str(iris)
+```
+
+Pour obtenir certaines statistiques descriptives de base, telles que le minimum, 
+le maximum puis la moyenne (variables continues), ainsi que le nombre 
+d'observations (variables catégoriques):
+```{r}
+summary(iris)
+```
+
+
+Pour connaître les niveaux d'une variable catégorique:
+```{r}
+levels(iris$Species)
+```
+
+<br>
+
+## Visualisation d'un jeu de données
+
+La fonction `plot()` est une fonction versatile qui permet de créer une grande
+variété de figures avec les données brutes. Dépendemment du type de donnée et des arguments fournis à la fonction, `plot()` peut générer plusieurs types de figures comme:
+
+Une seule matrice de *scatterplots* figure peut être créée avec toutes les variables.
+```{r}
+plot(iris)
+```
+
+Pour créer un *scatterplot* de la relation entre une variable spécifique et une autre,
+il suffit d'entrer celles-ci dans la fonction, séparées par le signe **~**. Par 
+exemple, si on veut visualiser la relation entre la longueur des sépales et celle 
+des pétales dans le jeu de données `iris`, on peut l'écrire ainsi:
+
+```{r}
+plot(iris$Sepal.Length~iris$Petal.Length)
+```
+
+À l'aide de la fonction `boxplot()`, on peut visualiser la dispersion d'une variable selon les groupes d'une variable catégorique. Ce type de figure permet aussi d'identifier rapidement des valeurs aberrantes ou des anomalies. 
+
+```{r}
+boxplot(iris$Petal.Length~iris$Species)
+```
+
+La fonction `hist()` génère un histogramme de la variable qui y est précisée.
+
+```{r}
+hist(iris$Sepal.Width)
+```
+
+<br>
+
+# Conseils pour des figures et tableaux réussis
+
+Les figures sont des représentations visuelles des résultats. Elles rendent la lectures des résultats principaux plus facile et permettent de mettre en évidence des tendances ou motifs intéressants. On veut pouvoir la comprendre sans avoir à osciller entre la figure et le texte. Chaque figure devrait correspondre à un message général de votre étude. Chacune devrait répondre en totalité ou en partie à un  objectif.
+
+Voici quelques aspects à considérer pour présenter vos figures:
+
++ **Un titre descriptif**: doit contenir les variables mesurées, les unités de mesure, le nom commun et en latin du taxon (si applicable). Le titre doit fournir assez d'information pour qu'on comprenne le contexte de la figure sans devoir se référer au texte.
+
++ **Titre des axes**: doivent comprendre les variables et leur unité de mesure. 
+
++ **Les données**: les données brutes (non transformées!) doivent être présentées.
+
++ **Barres d'erreurs, intervalles de confiance et/ou de prédiction**: pour un graphe à barres, ajouter les barres d'erreur afin de représenter la variabilité associée aux données. Pour les figures de régression, il est important d'ajouter l'intervalle de confiance ou de prédiction (dans le cas des résultats d'un modèle linéaire généralisé binomial).
+
++ **Légende dans la figure**: une petite légende peut être nécessaire pour distinguer les traitements (couleur, type de ligne, etc.)
+
++ **Indice de significativité**: on doit retrouver la valeur p d'une relation, des astérisques au-dessus de graphes à barres pour indiquer si la relation est significative, le R2 d'un modèle.
+
+Les tableaux sont un bon choix pour présenter de l'information numérique détaillée. Ils présentent habituellement des résultats plus complexes qui seraient trop encombrants à inclure dans une figure ou dans le texte. Généralement, si les données ne peuvent être présentées en une ou deux phrases, un tableau est nécessaire. Les lignes et les colonnes doivent contenir le nom de la variable ainsi que l'unité de mesure. Un tableau résumé des statistiques peut inclure, par exemple, la moyenne, l'écart-type, les intervalles de confiances, les degrés de liberté, la valeur p et autres statistiques (comme la *F value*).
+
+
+## Légende d'une figure ou d'un tableau
+Les légendes servent à compléter l'information qui est présentée dans le tableau ou la figure. On y retrouve entre autre les tailles d'échantillons (n), valeur p, des descriptions des abréviations, la méthode de collection, le nombre de réplicats, etc.
+
+## Annexe ou pas?
+Les données ou les figures qui ne contribuent pas directement à l'histoire principale de votre rapport peuvent être rassemblées en annexes. Dans cette section, on peut retrouver, par exemple, des cartes du site d'échantillonnage, du matériel utilisé pour récolter les données, des tableaux avec davantage d'informations sur les modèles (pas de capture d'écran du *summary*!), etc.
+
+
+<br>
+
+# Coder des graphiques avec ggplot
+
+Avant de commencer, identifiez vos variables dépendantes et indépendantes. Puis, déterminez quels sont les types de ces variables avec lesquelles vous allez travailler.
+
+Sont-elles **catégoriques** (et **nominales** ou **ordinales**), ou bien **numériques** (et **continues** ou **discrètes**)?
+
+C'est ce qui déterminera le choix de type de figure pour représenter vos données - un histogramme, un scatterplot, un boxplot, un barplot ? Autre?
+
+Consultez ce lien pour mieux comprendre:
+
+https://statisticsbyjim.com/basics/data-types/
+
+<br>
+
+# ANOVA
+La fonction de base `plot()` permet de visualiser rapidement un jeu de données, par exemple avec un histogramme. Par contre, vous verrez que son utilisation peut devenir limitée lorsqu'il s'agit de réaliser des figures plus complexes ou simplement modifier certains paramètres graphiques. 
+
+C'est pour cela que nous suggérons d'utiliser la fonction `ggplot()`, du package `ggplot2`. Cette fonction permet de réaliser des graphiques de façon plus intuitive et permet de les mettre en page plus facilement qu'avec la fonction `plot()`. Elle est aussi mieux documentée, il est donc plus facile de comprendre et utiliser les différents aspects de la fonction. Google est d'ailleurs votre meilleur allié pour la réalisation de vos figures!
+
+Contrairement à la fonction `plot()`, `ggplot()` fonctionne par couches. 
+Une figure `ggplot()` commence avec la fonction `ggplot()`. Elle sert à "préparer" la figure: on spécifie le jeu de données à utiliser, puis on choisit les variables qui formeront nos axes. 
+
+La fonction `ggplot()` nécessite deux arguments: le dataset (jeu de données), puis l'argument `aes()`. Ce dernier nous permet d'assigner des variables du dataset aux composantes du graphique (par exemple, les axes x et y). Voici un exemple, toujours avec le jeu de données Iris. Nous allons tester si la largeur des sépales diffère entre les espèces.
+
+(Revoir l'atelier 3 pour l'explication de l'ANOVA, incluant les postulats et critères d'utilisation, que je passe ici)
+
+```{r}
+library("ggplot2")
+
+head(iris)
+
+boxplot(Sepal.Width ~ Species,
+  data = iris)
+```
+
+On produit d'abord le modèle linéaire, et le test d'ANOVA, avec `Sepal.Width` comme variable dépendante et `Species` comme variable indépendante.
+
+```{r}
+modele.SW<-lm(Sepal.Width ~ Species, data = iris)
+
+#Test anova:
+anova(modele.SW)
+summary(modele.SW)
+
+```
+
+Ensuite, on effectue le test post-hoc Tukey:
+
+```{r}
+compSW <- aov(Sepal.Width ~ Species, data = iris)
+TukeyHSD(compSW)
+summary(compSW)
+
+```
+
+On peut ensuite construire notre figure.
+D'abord, la fonction `ggplot()`. On spécifie le jeu de données, puis l'argument `aes()`, ici les axes x et y:
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width))
+```
+
+Où sont les données?
+Il faut les ajouter!
+
+C'est comme ça que `ggplot()` fonctionne. On crée la base de notre figure, puis on y ajoute les données à l'aide des fonctions `geom_*`. Par exemple, `geom_points` nous permet d'ajouter des données sous forme de scatterplots (donc des points), tandis que `geom_line` nous permet d'ajouter une ligne. Dans notre cas, nous voulons montrer nos données sous forme de boxplot, donc nous utilisons `geom_boxplot`. Il ne faut pas oublier d'ajouter un `+` après chaque fonction:
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot()
+```
+
+
+Pour ajouter/modifier d'autres éléments, il faut ajouter des couches. Ainsi, on peut changer les titres d'axes (labs pour labels), changer le thème de notre graphique (`theme_bw` est plus minimaliste), et avec la fonction `theme()`, retirer la grille et centrer le titre:
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot()+
+labs(x = "Espèce", 
+	   y = "Largeur des sépales (cm)",
+	   title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+```
+
+
+On peut aussi décider de changer les couleurs. Ce n'est pas toujours nécessaire ou pertinent, si ça n'ajoute pas d'information à la figure. Il faut faire attention de ne pas surcharger la figure avec le design esthétique, l'important c'est de focuser sur le message que l'on veut transmettre avec notre figure, et ne pas ajouter d'éléments qui sont distrayants. Mais pour l'exercice et se familiariser avec les paramètres graphiques, essayons:
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot(fill = "salmon", 
+             color = "red")+
+labs(x="Espèce", 
+     y="Largeur des sépales (mm)",
+     title="Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5)) 
+```
+
+On a donc changé le `fill` (intérieur) et `color` (trait) de nos boxplot, à même la fonction `boxplot()`.
+On pourrait aussi changer la couleur des boîtes en fonction de l'espèce d'iris (qui est aussi notre variable x). Dans ce cas, il faut ajouter un argument `aes()` à la fonction `boxplot()`, pour assigner notre variable à un aesthetic. Ce sera notre variable `Species`:
+
+```{r}
+#Fill:
+
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot(aes(fill = Species), 
+             show.legend = FALSE)+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5)) 
+
+#Color:
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot(aes(color = Species), 
+             show.legend = FALSE)+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5)) 
+```
+
+
+Il y a aussi des palettes de couleurs prédéfinies dans R, qu'on peut utiliser avec la fonction `scale_fill_brewer` (j'ai choisi la palette "Accent"):
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_boxplot(aes(fill = Species), 
+             show.legend = FALSE)+
+scale_fill_brewer(palette = "Accent")+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+
+#Qu'est-ce qui arrive si on change Fill pour Color, dans boxplot()? Il faut aussi changer scale_fill_brewer() pour scale_color_brewer():
+
+ggplot(iris, aes(x = Species, y=Sepal.Width)) +
+geom_boxplot(aes(color = Species), 
+             show.legend = FALSE)+
+scale_color_brewer(palette = "Accent")+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+```
+
+Puisque `ggplot()` fonctionne par couche, on peut aussi choisir d'ajouter les données brutes à notre figure. Par exemple, on ajoute avant `geom_boxplot()` une autre couche de données avec `geom_point()`, dans lequel on peut spécifier, encore une fois, l'argument `aes()` pour assigner la variable qui sera colorée. L'argument position définit le niveau de "jitter", c'est-à-dire des points un peu "éparpillés" sur l'axe x. Ensuite, on pourrait ajouter l'argument `alpha=0.5` dans la fonction `boxplot()`, pour les rendre semi-transparents:
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_point(aes(color = Species), 
+           position = position_jitter(0.2), 
+           shape = 16, 
+           size = 2.5, 
+           show.legend = FALSE)+
+scale_color_brewer(palette = "Accent")+
+geom_boxplot(alpha = 0.5)+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)", 
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+```
+
+On peut aussi ajouter des lettres pour montrer nos résultats de comparaison (voir https://statdoe.com/one-way-anova-and-box-plot-in-r/ pour la méthode). En gros, la fonction `multcompLetters4` assigne les lettres en fonction des groupes du test de Tukey, puis on constuit une table qui contient ces lettres (`LettresSW` dans l'exemple), la variable `Species`, ainsi que la position de la lettre (en haut du quartile pour chaque boîte/valeur de `Species`). 
+
+Deux nouvelles libraries sont nécessaires.
+
+```{r}
+library(dplyr)
+library(multcompView)
+
+compSW <- aov(Sepal.Width ~ Species, data = iris)
+tukeySW <- TukeyHSD(compSW)
+print(tukeySW)
+
+cld <- multcompLetters4(compSW, tukeySW)
+
+LettresSW <- group_by(iris, Species) %>%
+  summarise(mean = mean(Sepal.Width), quant = quantile(Sepal.Width, probs = 0.75)) %>%
+  arrange(desc(mean))
+
+cld <- as.data.frame.list(cld$Species)
+LettresSW$cld <- cld$Letters
+
+print(LettresSW)
+```
+
+On ajoute nos lettres au boxplot avec la fonction `geom_text()`, avec comme argument `aes()` la table que l'on vient de créer. On peut aussi ajouter la statistique de test avec la fonction `annotate()`, en utilisant les coordonnées x et y dans notre figure.
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_point(aes(color = Species), 
+           position = position_jitter(0.1), 
+           shape = 16, 
+           size = 2.5, 
+           show.legend = FALSE)+
+scale_color_brewer(palette = "Accent")+
+geom_boxplot(alpha = 0.5)+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+geom_text(data = LettresSW, 
+          aes(x = Species, y = quant, label = cld), 
+          size = 5, 
+          vjust=-1, hjust =-5)+
+annotate("text", x = 3, y = 4.5, label = "ANOVA, F(2)=49.16, p<0.001")
+```
+
+Pour bien faire, on pourrait même changer les étiquettes en x. Avec la fonction `scale_x_discrete`, j'ajoute "I." pour iris à chaque étiquette et je les mets en italique, puisque ce sont des noms latins, avec l'argument `axis.text.x` dans la fonction `theme()`. 
+
+```{r}
+ggplot(iris, aes(x = Species, y = Sepal.Width)) +
+geom_point(aes(color = Species), 
+           position = position_jitter(0.1), 
+           shape = 16, 
+           size = 2.5, show.legend = FALSE)+
+scale_color_brewer(palette = "Accent")+
+geom_boxplot(alpha = 0.5)+
+labs(x = "Espèce", 
+     y = "Largeur des sépales (mm)",
+     title = "Largeur des sépales chez les espèces d'iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5), 
+      axis.text.x = element_text(face="italic"))+
+geom_text(data = LettresSW, 
+          aes(x = Species, y = quant, label = cld), 
+          size = 5, 
+          vjust=-1, hjust =-5)+
+annotate("text", x = 3, y = 4.5, label = "ANOVA, F(2)=49.16, p<0.001")+
+scale_x_discrete(labels = c("I. setosa", "I. versicolor", "I. virginica"))
+```
+
+
+# Régression linéaire
+
+<br>
+
+
+# GLM
+
+
+Essayons avec un type d'analyse différent, les GLM binomiaux. 
+Nous allons utiliser le jeu de données "survie". Encore une fois, référez-vous à l'atelier sur les modèles GLM pour bien comprendre les analyses, j'y vais plus grossièrement ici.
+
+Nous aurons besoin de:
+
+```{r}
+library(ggeffects)
+```
+
+D'abord, télécharger le jeu de données "survie.csv", puis l'ouvrir dans R (*le jeu provient du cours BIO8092).
+
+```{r}
+surv <- read.delim2('survie.csv', header = TRUE, sep = ';', dec = '.')
+head(surv)
+```
+
+
+
+On a donc des données de masse, d'âge et de sexe (sous forme 0/1, mâle=1 et femelle=0), ainsi que ce qui sera notre variable réponse, la survie d'une bibitte quelconque. Celle-ci est aussi notée 0/1, car évidemment, c'est une variable binaire. Puisque celle-ci ne suit pas une loi normale, nous devons utiliser un GLM.
+
+Prenez bien le temps de comprendre comment fonctionne la régression logistique. L'interprétation des coefficients n'est pas aussi directe ou intuitive que pour la régression linéaire. Comme vous vous souvenez sûrement, les paramètres sont dans une échelle différente que l'échelle de la "réalité": la pente nous donne plutôt le changement dans le logit de la probabilité, pour un changement d'une unité de la variable explicative.  
+
+Rappel: Les GLM fonctionnent avec ce qu'on appelle une fonction de lien ("logit", dans le cas d'une variable binaire - il en existe d'autre pour les autres distributions, comme celle de poisson ou gamma). Cette transformatiom permet de passer de l'échelle des valeurs observées (soit 0 et 1), à une échelle qui est linéaire, qui nous permet de "linéariser" un modèle à variable réponse binaire. Ainsi:
+Les valeurs observées de y (0 et 1) sont transformées avec la fonction de lien f() pour être sur la même échelle que le prédicteur linéaire (a+bxi).
+Les paramètres du modèle, nécessairement, sont dans cette échelle transformée. C'est pour cela qu'on ne peut pas calculer directement les valeurs prédites, comme avec la régression linéaire. Plutôt, les valeurs prédites par le modèle sont obtenues en appliquant l'inverse de la transformation, donc l’inverse de la fonction de lien (f−1), au prédicteur linéaire. Ainsi, Probabilité(succès)= logit−1(a+bx).
+
+On peut convertir les paramètres du modèle logistique en *ratios des cotes*, en calculant e^-b, b étant la valeur d'un paramètre donné dans un modèle (voir https://statisticsbyjim.com/probability/odds-ratio/). Ce ratio des cotes nous indique le changement de cote associé à l'augmentation d'une unité de notre variable indépendante, par exemple, l'âge (s'il s'agit d'une autre variable binaire, par exemple le sexe, l'augmentation d'unité signifie qu'on passe de zéro, soit les femelles, à 1, soit les mâles − l'ordonnée à l'origine représente le 0 de toutes les variables).
+
+En gros, 
+
+Si le ratio des cotes est >1, la probabilité de succès (dans notre cas, la survie) augmente avec l'augmentation de notre variable dépendante. 
+
+Si le ratio des cotes est <1, la probabilité de succès (dans notre cas, la survie) diminue avec l'augmentation de notre variable dépendante. 
+
+Calculer le ratio des cotes e^-b nous permet d'avoir une idée générale de l'effet d'une variable indépendante sur notre variable réponse.
+
+
+Mais ce qui vous intéresse dans le cadre de cet atelier, c'est de visualiser les effets desdites variables!
+
+Pour simplifier les calculs, on peut utiliser la fonction `ggpredict()` du package `ggeffects`. Celle-ci nous calcule les probabilités de survie (ou de succès) ainsi qu'un intervalle de confiance. On peut ensuite utiliser ces probabilités pour réaliser une figure avec `ggplot()`.
+
+Reprenons notre jeu de données.
+
+
+```{r}
+
+head(surv)
+
+```
+
+On peut commencer avec la question suivante: *quel est l'effet de la masse sur la probabilité de survie?*
+
+Pour faire notre modèle, on utilise la fonction `glm`, qui ressemble à la fonction `lm` que nous avons utilisée plus tôt. Avec `glm`, on ajoute l'argument `family = binomial`, qui spécifie la distribution avec laquelle nous travaillons, soit la distribution binomiale. 
+
+```{r}
+modele.masse <- with(surv, glm(survie ~ masse, family = binomial))
+
+summary(modele.masse)
+
+#Quel serait le ratio des cotes?
+
+b.masse<-modele.masse$coefficients['masse']
+
+exp(b.masse)
+
+```
+
+La masse aurait donc un effet positif sur la probabilité de survie. Essayons de visualiser ce résultat.
+
+J'utilise la fonction `ggpredict` du package `ggeffects`. On spéficie d'abord le modèle à prédire, ensuite la variable que l'on souhaite visualiser en x.
+
+```{r}
+
+predictions.masse<-ggpredict(modele.masse, "masse")
+
+predictions.masse
+
+```
+
+Dans le récapitulatif, on voit l'étendue des valeurs de masse, ainsi que la probabilité de survie prédite pour chaque valeur de masse. De plus, un intervalle de confiance à 95% a été calculé. On a donc ce qu'il faut pour réaliser notre figure.
+
+Nous utiliserons comme source de données, la table de prédictions que nous venons de sortir.
+
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted))
+
+plot.masse
+```
+
+On voit que la valeur maximale de l'axe y est de 1, qui correspondrait à une probabilité de 100%. Il est important d'ajouter notre invervalle de confiance, avec `geom_ribbon`. On utilise à nouveau notre table de prédictions, puisqu'elle contient les intervalles de confiance. Avec `aes(ymin = conf.low, ymax = conf.high)`, on délimite les limites haut et bas de notre ruban. Ces limites correspondent aux valeurs d'intervalle calculées. Avec `alpha = .2`, le ruban est plus translucide: 
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)
+
+plot.masse
+
+```
+
+C'est bien, mais notre figure est pas mal tout nue!
+
+On peut identifier nos axes + titre, ajouter le `theme_bw()`, enlever la grille + centrer le titre:
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la masse")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+
+plot.masse
+
+```
+
+Les valeurs de notre axe y sont de 0 à 1. On peut transformer notre axe pour qu'il soit exprimé en % sur 100, avec `scale_y_continuous`. De plus, `ggplot()` a choisi de commencer notre axe un peu en haut de zéro (même si c'est moins évident sur cette figure - retournez voir celle sans le ruban) car il optimise l'espace que prend nos données sur le graphique. Il serait plus juste de commencer notre axe à zéro. J'ajoute l'argument `limits = c(0, 1)` dans `scale_y_continuous`.
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie", 
+     title = "Probabilité de survie de (?) en fonction de la masse")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(0, 1))
+
+plot.masse
+
+```
+
+
+Si on voulait avoir moins de ticks sur l'axe des y (peut rendre la figure plus facilement lisible si elle est en petit format), on peut ajouter `breaks = seq(0, 1, by = 0.5)` dans `scale_y_continuous`, pour que les ticks soient à intervalle de 0.5:
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la masse")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(0, 1), 
+                   breaks = seq(0, 1, by = 0.5))
+
+plot.masse
+
+```
+
+Terminons la figure avec une jolie couleur, tiens:
+Dans `geom_line()`, j'ajoute `color=group` à l'argument `aes()`. On indique ainsi que le paramètre graphique de la couleur du trait sera associée aux "groupes". Pour l'instant, on n'a qu'un seul groupe, donc ça peut sembler abstrait. Par contre, c'est ce qui nous permet, avec `scale_color_manual()`, de changer la couleur de notre ligne. 
+
+Même chose pour le ruban: dans `geom_ribbon()`, j'ajoute `fill=group` à l'argument `aes()`, pour assigner le remplissage du ruban aux "groupes".
+
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = FALSE)+
+scale_color_manual(values = c("#D28D32"))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+scale_fill_manual(values = c("#D28D32"))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie", 
+     title = "Probabilité de survie de (?) en fonction de la masse")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(0, 1), 
+                   breaks = seq(0, 1, by = 0.5))
+
+plot.masse
+
+```
+
+Remarquez que j'utilise `color` pour la ligne, et `fill` pour le ruban, comme nous avions abordé plus tôt avec les points dans l'ANOVA. En effet, on ne peut pas "fill" une ligne; en revanche, on peut "color" un ruban... Mais c'est sa bordure qui sera colorée:
+
+```{r}
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = FALSE)+
+scale_color_manual(values = c("#D28D32"))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, color = group, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+
+plot.masse
+
+```
+
+On pourrait aussi ajouter une couche de données contenant les données brutes, avec `geom_point`. Toutefois, on souhaite afficher les données brutes issues de `surv`, et non les résultats de notre modèle `predictions.masse`. Donc comme avec notre ANOVA, on assigne nos `aes()` dans `geom_point(data=surv, aes(x=masse, y=survie))`. J'utilise `position = position_jitter()`, car cela permet de mieux voir les points qui sont collés tous à la même valeur, soit 0 et 1 (aussi, détail, mais pour cette figure, je dois aussi ajouter `height = 0.01` pour réduire le niveau de jitter appliqué en y, sinon le jitter s'énerve un peu trop et remplit tout l'espace - je crois que c'est lié au fait que notre variable n'a que deux valeurs...). De plus, vu que ça fait "déborder" les points un peu en dessous de 0 et un peu au dessus de 1, j'élargis les limites de l'axe y avec `limits = c(-0.02, 1.02))` dans `scale_y_continuous()`.
+
+On termine en changeant la couleur des points et en augmentant la taille du trait avec `linewidth=1.1` dans `geom_line`.
+
+```{r}
+
+
+plot.masse <- ggplot()+
+geom_line(data = predictions.masse, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = FALSE, 
+          linewidth = 1.1)+
+scale_color_manual(values = c("#D28D32"))+
+geom_ribbon(data = predictions.masse, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = .2)+
+scale_fill_manual(values = c("#D28D32"))+
+geom_point(data = surv, 
+           aes(x = masse, y = survie), 
+           alpha = .4, 
+           color = "cornsilk4", 
+           position = position_jitter(0.1, height = 0.01))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la masse")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(-0.02, 1.02))
+
+plot.masse
+
+
+
+```
+
+<br>
+
+Dans le jeu de données, on retrouve aussi la variable `sexe`:
+
+```{r}
+head(surv)
+```
+
+On pourrait donc faire un deuxième modèle qui inclut l'effet du sexe de la bibitte dans sa probabilité de survie. 
+
+```{r}
+modele.masse.sexe <- with(surv, glm(survie ~ masse + sex, family = binomial))
+summary(modele.masse.sexe)
+```
+
+Il ne semble pas avoir d'effet significatif du sexe sur la probabilité de survie. 
+
+**Mais, pour l'exercice, faisons comme si l'effet était significatif et qu'on voulait l'illustrer dans une figure!**
+
+On calcule d'abord nos valeurs prédites de survie:
+
+```{r}
+predictions.masse.sexe.test <- ggpredict(modele.masse.sexe, c("masse"))
+
+predictions.masse.sexe.test
+```
+
+Remarquez dans le récapitulatif: *Adjusted for: sex = 0.50*
+
+Rappelez-vous comment est construit un modèle GLM:
+![](./fig/fct_lien_glm.png)
+
+Les différents termes (paramètres β)*(la valeur de x) sont additionnés pour obtenir la variable réponse. 
+
+Donc, quand on lui demande de calculer la probabilité de survie en fonction de la masse, la fonction `ggpredit()` utilise par défaut la valeur moyenne de l'autre variable. Il set donc la valeur de `sexe` à 0,5. On obtient comme figure: 
+
+```{r}
+
+plot.masse.sexe.test <- ggplot()+
+geom_line(data = predictions.masse.sexe.test, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = FALSE, 
+          linewidth=1.1)+
+labs(title = "Probabilité de survie ajustée pour sexe = 0.5")+
+theme(plot.title = element_text(hjust = 0.5))
+
+plot.masse.sexe.test
+
+```
+
+Dans notre cas, par contre, il serait plus intéressant de pouvour visualiser cette différence.
+
+Pour cela, il faut inclure la variable `sexe` dans la fonction `ggpredict`:
+
+```{r}
+
+predictions.masse.sexe <- ggpredict(modele.masse.sexe, c("masse","sex"))
+
+predictions.masse.sexe
+
+```
+
+Cette fois-ci, nous obtenons deux tables de valeurs prédites - une pour `sex = 0` (femelles) et une pour `sex = 1` (mâles). 
+
+Dans le précédent modèle, nous avions défini l'`aes(color=group)`, pour colorer notre ligne. La notion de groupe était plus abstraite, car il n'y avait en réalité qu'un seul groupe. Par contre, ici, dans `plot.masse.sexe`, nous en avons deux - les femelles et les mâles. Donc, quand on assigne `color` aux `group`, nous colorons les deux groupes de couleurs différentes:
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth=1.1)
+
+plot.masse.sexe
+
+```
+
+
+On doit ajouter nos intervalles de confiance:
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE)+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = FALSE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)
+
+plot.masse.sexe
+
+
+```
+
+La légende doit aussi être modifiée. `scale_color_manual` traite la couleur du trait formé par `geom_line()`, et `scale_fill_manual`, le remplissage du ruban `geom_ribbon`. 
+En même temps, avec ces mêmes fonctions, on peut spécifier le titre de la légende (on n'écrit pas "Légende"!), le nom des groupes (la variable `sex` est codée 0 / 1, donc on doit ajouter manuellement ces noms). On peut aussi changer les couleurs. 
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE)+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+scale_fill_manual(name = "Sexe", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))
+
+plot.masse.sexe
+
+```
+
+Il est important que les noms et les `aes()` soient constants pour chaque ligne de notre figure `ggplot()`. Sinon, des légendes supplémentaires sont créées:
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE)+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+scale_fill_manual(name = "Coucou", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))
+
+plot.masse.sexe
+
+```
+
+On peut ajouter les éléments graphiques que nous avions codés pour la figure de notre premier modèle:
+`geom_line(linewidth=1.1)`
+`labs()`
+`theme_bw()`
+`theme()`
+`scale_y_continuous(labels = scales::percent, limits = c(-0.02, 1.02))`
+
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, aes(x=x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth = 1.1)+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+scale_fill_manual(name = "Sexe", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la masse, pour les individus mâles et femelles")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(-0.02, 1.02))
+
+plot.masse.sexe
+
+```
+
+Le titre est devenu plus long et pourrait déborder de la figure (cela dépendra des paramètres choisis au moment d'exporter la figure). On peut utiliser `\n` pour indiquer précisément l'endroit où couper notre texte:
+
+
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth = 1.1)+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+scale_fill_manual(name = "Sexe", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la\nmasse, pour les individus mâles et femelles")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(-0.02, 1.02))
+
+plot.masse.sexe
+
+```
+
+On peut ajouter nos données brutes pour terminer la figure. 
+
+Je dois faire une dernière étape pour afficher correctement les données brutes.
+
+```{r}
+surv$sex<-as.factor(surv$sex)
+```
+
+Sinon, il traite `sex` comme étant une variable continue (ce qu'elle est), et on ne peut pas appliquer les paramètres graphiques correctement!
+
+(Idéalement, faire cela avant l'analyse...!)
+
+```{r}
+
+plot.masse.sexe <- ggplot()+
+geom_line(data = predictions.masse.sexe, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth = 1.1)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_fill_manual(name = "Sexe", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))+
+geom_point(data = surv, aes(x = masse, y = survie, col = sex), 
+           alpha = .4, 
+           position = position_jitter(0.1, height = 0.01))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie",
+     title = "Probabilité de survie de (?) en fonction de la\nmasse, pour les individus mâles et femelles")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(-0.02, 1.02))+
+scale_x_continuous(breaks = seq(96, 106, by = 2))
+
+plot.masse.sexe
+
+
+
+```
+
+<br>
+
+Si on avait une troisième variable dans notre modèle, par exemple l'âge:
+
+```{r}
+head(surv)
+```
+
+On peut l'ajouter à notre modèle:
+
+```{r}
+modele.masse.sexe.age <- with(surv, glm(survie ~ masse + sex + age, family = binomial))
+
+summary(modele.masse.sexe.age)
+
+```
+
+Ok, cette variable n'est pas significative non plus. Mais encore une fois, essayons de la visualiser **pour l'exercice**.
+
+
+On débute avec le calcul des prédictions, en ajoutant la variable `age`:
+
+```{r}
+predictions.masse.sexe.age <- ggpredict(modele.masse.sexe.age, c("masse","sex","age"))
+
+predictions.masse.sexe.age
+```
+
+Nous obtenons 6 tables de prédictions. Puisque `age` est une variable continue, `ggpredict` nous a choisi 3 valeurs de `age` représentatives de la distribution et a calculé un `y` prédit pour chacunes de ces valeurs et pour les 2 niveaux de `sex`. 
+
+Ici nous avons deux options. Puisque nous avons une troisième variable indépendante à représenter, on peut lui assigner un `aes()`, par exemple `linetype`. 
+
+Nous avons donc, dans nos tables de prédiction:
+
+`masse` = `x` = `x`
+
+`survie` = `y` = `predicted`
+
+`sex` = `color` = `group`
+
+Dans la table de prédiction, bien que ce ne soit pas affiché, la troisième variable indépendante est appelée `facet`, comme on peut remarquer dans
+
+```{r}
+str(predictions.masse.sexe.age)
+```
+
+Dans ce cas, on ajoute l'`aes()` `linetype` à `geom_line` assigné à `facet`:
+
+```{r}
+plot.masse.sexe.age1 <- ggplot()+
+geom_line(data = predictions.masse.sexe.age, 
+          aes(x = x, y = predicted, color = group, linetype = facet), 
+          show.legend = TRUE, 
+          linewidth=1.1)
+
+plot.masse.sexe.age1
+```
+
+On peut voir dans la légende les 3 valeurs de `age` qui ont été utilisées pour le calcul.
+
+La deuxième option serait d'utiliser des facettes. Ceci crée des graphiques côte à côte avec différents niveaux d'une variable choisie. Dans ce cas, j'enlève l'`aes()` qu'on vient d'ajouter, et j'ajoute la fonction `facet_wrap(~facet)`, qui crée 3 facettes avec notre "variable" `facet`:
+
+```{r}
+
+plot.masse.sexe.age2 <- ggplot()+
+geom_line(data = predictions.masse.sexe.age, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth = 1.1)+
+facet_wrap(~ facet)
+
+plot.masse.sexe.age2
+
+```
+
+On peut terminer ce graphique, avec le même code que les précédents. J'ajoute `labeller` dans `facet_wrap` pour changer le titre des étiquettes. J'ai arrondi l'âge pour les étiquettes.
+
+```{r}
+
+plot.masse.sexe.age2 <- ggplot()+
+geom_line(data = predictions.masse.sexe.age, 
+          aes(x = x, y = predicted, color = group), 
+          show.legend = TRUE, 
+          linewidth = 1.1)+
+scale_color_manual(name = "Sexe", 
+                   labels = c("Femelle", "Mâles"), 
+                   values = c("0" = "#D28D32", "1" = "darkblue"))+
+geom_ribbon(data = predictions.masse.sexe, 
+            show.legend = TRUE, 
+            aes(x = x, y = predicted, fill = group, ymin = conf.low, ymax = conf.high), 
+            alpha = 0.2)+
+scale_fill_manual(name = "Sexe", 
+                  labels = c("Femelle", "Mâles"), 
+                  values = c("0" = "#D28D32", "1" = "darkblue"))+
+geom_point(data = surv, 
+           aes(x = masse, y = survie, col = sex), 
+           alpha = .4, 
+           position = position_jitter(0.1, height = 0.01))+
+labs(x = "Masse (g)", 
+     y = "Probabilité de survie", 
+     title = "Probabilité de survie de (?) en fonction de la\nmasse et de l'âge, pour les individus mâles et femelles")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+scale_y_continuous(labels = scales::percent, 
+                   limits = c(-0.02, 1.02))+
+scale_x_continuous(breaks = seq(96, 106, by = 2))+
+facet_wrap(~ facet, labeller = labeller(facet = c( "57.64" = "58 jours", "59.98" = "60 jours",  "62.32" = "62 jours"))) 
+
+plot.masse.sexe.age2
+```
+
+Vous pouvez vous pratiquer en complétant la première option!
+
+```{r}
+plot.masse.sexe.age1
+```
+
+<br>
+
+# Régression linéaire simple
+
+
+Maintenant qu'on a fait un exemple plus compliqué, essayons d'illustrer un modèle linéaire simple.
+
+Reprenons les données `iris()`
+
+```{r}
+head(iris)
+```
+
+On peut créer un modèle linéaire pour prédire `Sepal.Length` en fonction de `Petal.Length`:
+
+**Encore une fois, ce n'est qu'un exemple pour s'exercer avec `ggplot()`. Il ne faut pas oublier les étapes préliminaires, que je saute ici, avant de se lancer dans un modèle.**
+
+
+```{r}
+
+regr.SL <- lm(Sepal.Length ~ Petal.Length, data = iris)
+summary(regr.SL)
+
+```
+
+Enfin quelque chose de significatif! Super, nous pouvons représenter cettre relation.
+
+Avec une régression linéaire simple, évidemment, nous n'avons pas besoin d'une fonction comme `ggpredict` pour calculer y.
+
+On peut commencer par spécifier les `aes()` **du jeu de données brutes** directement dans `ggplot()`; ensuite, nous visualisons ces données avec `geom_point`; puis, `geom_smooth(method = lm)` (calcule, puis) ajoute la courbe de la régression. 
+
+
+```{r}
+plot.regr.SL <- ggplot(data = iris, aes(x = Petal.Length, y = Sepal.Length))+
+geom_point()+
+geom_smooth(method = lm, 
+            se = TRUE)
+
+plot.regr.SL
+
+```
+
+On peut embellir notre graphique:
+
+
+```{r}
+plot.regr.SL <- ggplot(data = iris, aes(x = Petal.Length, y = Sepal.Length))+
+geom_point(col = "#8F1E5F")+
+geom_smooth(method = lm, 
+            se = TRUE, 
+            col = "#2B091D", 
+            fill = "#591130")+
+labs(x = "Longueur du pétale (cm)", 
+     y = "Longueur du sépale (mm)",
+     title = "Longueur du pétale en fonction de la longueur du sépale chez les iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))
+
+plot.regr.SL
+```
+
+On retourne voir le résumé de notre modèle pour ajouter la statistique:
+
+```{r}
+summary(regr.SL)
+
+```
+
+Et on l'ajoute au graphique:
+
+```{r}
+
+plot.regr.SL <- ggplot(data = iris, aes(x = Petal.Length, y = Sepal.Length))+
+geom_point(col="#8F1E5F")+
+geom_smooth(method = lm, 
+            se = TRUE, col = "#2B091D", fill = "#591130")+
+labs(x = "Longueur du pétale (cm)", 
+     y = "Longueur du sépale (mm)",
+     title = "Longueur du pétale en fonction de la longueur du sépale chez les iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+annotate("text", 
+         x = 2.5, y = 7.75, 
+         label = "R2 = 0.76, F(1, 148) = 468.6, p = < 0.001")
+
+plot.regr.SL
+
+
+```
+
+C'est important d'ajouter un intervalle de confiance, ainsi qu'un intervalle de prédiction.
+L'intervalle de confiance s'affiche avec `geom_smooth(se = TRUE)`. Pour ce qui est de l'intervalle de prédiction, la fonction `predict()` calcule ces valeurs, puis colle ce nouveau dataframe à `iris` pour créer `iris.int.pred`. Nous utiliserons maintenant cette nouvelle table pour notre régression.
+
+```{r}
+
+int.pred <- predict(regr.SL, interval = "prediction")
+iris.int.pred <- cbind(iris, int.pred)
+head(iris.int.pred)
+
+```
+
+Dans `geom_ribbon(aes(ymin = lwr, ymax = upr)`, les `aes()` permettent d'assigner les bornes supérieures et inférieures (en y) du ruban aux variables `lwr` et `upr` que nous venons de calculer et ajouter à notre table.
+
+
+```{r}
+
+plot.regr.SL <- ggplot(data = iris.int.pred, aes(x = Petal.Length, y = Sepal.Length))+
+geom_point(col = "#8F1E5F")+
+geom_ribbon(aes(ymin = lwr, ymax = upr), 
+            alpha = .2, 
+            fill = "#591130")+
+geom_smooth(method = lm, 
+            se = TRUE, 
+            col = "#2B091D", 
+            fill = "#591130")+
+labs(x = "Longueur du pétale (cm)", 
+     y = "Longueur du sépale (mm)",
+     title = "Longueur du pétale en fonction de la longueur du sépale chez les iris")+
+theme_bw()+
+theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5))+
+annotate("text", 
+         x = 2.5, y = 7.75, 
+         label = "R2 = 0.76, F(1, 148) = 468.6, p = < 0.001")
+
+plot.regr.SL
+
+```
+
+
+Wow!
+
+
+<br>
+
+# *Cheat sheet* `ggplot()`
+
+Maintenant que vous êtes plus familiers avec `ggplot()`, voici un lien pour une *cheat sheet* pour `ggplot()`:
+
+https://rstudio.github.io/cheatsheets/html/data-visualization.html
+
+Elle contient toute l'information sur les différents `aes()`, `geom_*()`, `scale_*`, ainsi que sur les thèmes, les ajustements de position, et les légendes, par exemple. 
+
+<br>
+
+# À considérer lors de la création de figures
+
+Comme mentionné plus tôt, il faut être judicieux dans le choix de notre symbologie. 
+En effet, les couleurs et les symboles ont souvent un sens qui nous est intuitif, et représentent ainsi de l'information - quelles couleurs choisiriez-vous pour illustrer une température chaude? Froide?
+
+Ces choix de couleur contribuent à donner un sens à vos figures. Il existe des palettes de couleurs conçue pour illustrer des données, par exemple, d'élévation, ou de température. Certaines sont conçues pour maximiser le contraste entre les extrêmes des valeurs d'une variable.
+![](./fig/palettes.png)
+Il existe même une palette, "Okabe-Ito", contenant des couleurs qui sont plus accessibles pour les gens ayant une variété de problèmes visuels. D'autres palettes sont simplement esthétiques. 
+
+On doit aussi penser au type de variable que nous souhaitons illustrer. Par exemple, il serait moins approprié d'utiliser la valeur (donc de pâle à foncé) d'une même couleur pour colorer des variables catégoriques qui ne sont pas ordonnées (pensez aux boxplots des espèces d'iris), puisque celle-ci traduit la notion d’ordre et de progression. Une palette avec des couleurs aléatoires comme celle que nous avons utilisée est mieux dans ce cas. La valeur serait toutefois appropriée pour des données de concentration, par exemple. 
+
+Toutefois, certaines publications scientifiques n'acceptent que les figures en noir et blanc; dans ce cas, on peut utiliser des symboles, des textures (par exemple, le grain peut être utilisé au lieu de la valeur), ou différentes lignes pointillées, par exemple.
+
+![](./fig/valeur.png)
+
+De plus, assurez-vous que vos axes sont représentatifs de vos données.
+
+
+Pour terminer, utilisez une fonction pour exporter vos figures. "Copier-coller" ne suffit pas, car la résolution ne sera pas assez bonne. 
+
+Voici un exemple:
+
+`ggsave(path = "votre_chemin_comme_dans_setwd()", "titre_de_votre_figures.jpeg", width = 6, height = 6, dpi=700)`
+
+<br>
+
+# Ordinations
+
+Comme pour les analyses univariées, cet atelier est seulement axé sur la création de graphiques. Pour une introduction aux analyses multivariées (ordinations, PERMANOVA, Procrustes), consulter l'atelier 6.
+
+## Importer les données multivariées
+```{r}
+library(vegan)
+data(dune) # matrice de communautés
+data(dune.env) # données environnementales
+```
+
+Ce jeu de données contient une matrice d'abondance (dune) d'espèces végétales avec leur classe de couverture pour 20 sites. Le dataframe (dune.env) contient 5 variables denvironnementales.
+
+# PCA
+
+## Préparation des données
+
+Transformation Hellinger
+```{r}
+dune.hel <- decostand(dune, method="hellinger")
+```
+
+Faire une PCA (avec la fonction `prcomp` cette fois-ci, car l'objet qu'on va créer peut être "lu" plus tard par la fonction `ggord`)
+```{r}
+pca.dune <- prcomp(dune.hel)
+summary(pca.dune)
+```
+
+Dans l'atelier 6, nous avons fait nos PCA avec la fonction `rda`. Lorsqu'on compare le sommaire des deux analyses, on voit que les deux fonctions donnent les mêmes résultats.
+```{r}
+pca2.dune <- rda(dune.hel)
+summary(pca2.dune)
+```
+
+PERMANOVA. On va tester si la composition végétale diffère entre différents type d'aménagement (facteur; variable quantitative) des sites.
+```{r}
+dune.dist <- vegdist(decostand(dune, method='hellinger'), method='euclid')
+disper.dune <- betadisper(dune.dist, dune.env$Management)
+anova(disper.dune)
+permanova.dune <- adonis2(dune.dist ~ Management, data = dune.env)
+permanova.dune
+```
+
+Le test montre que le type d'aménagement a un effet statistiquement significatif sur la composition en espèces végétales des sites.
+
+## ggord + ggplot
+
+On va créer un graphique pour présenter la PCA avec les différents types d'aménagement.
+
+Extraire les scores des sites et des espèces, à partir de l'objet créer par `prcomp`. Cela va nous permettre de mettre éventuellement seulement les espèces désirées sur le graphique.
+```{r}
+site.scores<-pca.dune$x 
+(site.scores.df <- data.frame(site.scores))
+sp.scores<-pca.dune$rotation
+(sp.scores.df <- data.frame(sp.scores))
+```
+
+Ouverture des librairies nécessaires à la création du graphique.
+Si problème avec installation de la librairie ggord : https://rdrr.io/github/fawda123/ggord/
+```{r}
+library(ggord)
+library(ggplot2)
+library(ggrepel) # pour éviter overlap du texte
+```
+
+On va d'abord commencer le graphique avec la fonctions `ggord` du package du même nom.
+
+Le graphique créé par la fonction `ggord` est un objet ggplot. Cet objet (ici appelé pca.plot) peut être personnalisé à même la fonction `ggord`, et peut aussi servir de base sur laquelle ajouter des couches avec ggplot.
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1,1), ylims=c(-1,1)) # xlims et ylims définissent les limites dans l'affichage des axe (les valeurs entre parenthèses correspondent à l'échelle numérique des axes). On ajuste au fur et à mesure, au besoin.
+pca.plot # À la fin de chaque chunk, l'objet graphique est appelé pour qu'on visualise le rendu à chaque fois.
+```
+On remarque que la fonction`ggord` inclut par défaut la **proportion de la variance expliquée par les axes**. C'est super!
+
+Par défaut, la fonction `ggord` va mettre en graphique les deux premiers axes de l'ordination. Mais si on s'intéresse à différents axes, on peut spécifier lesquels mettre en graphique.
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1,1), ylims=c(-1,1),
+                  axes=c(1,3)) # Ici, on met en graphique les axes 1 et 3.
+pca.plot
+```
+
+On revient aux deux premiers axes. Faisons quelques petits changements. Les changements sont marqués d'un "#" à côté de la ligne.
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9), # ajustement des limites
+                  axes=c(1,2), # retour aux axes 1 et 2
+                  size=3, # diminution de la taille des points (sites)
+                  arrow=NULL,# enlever les flèches (qui viennent par défaut) pour les espèces
+                  labcol="forestgreen") # changer la couleur du texte pour les espèces
+pca.plot
+```
+
+Faisons d'autres changements!
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9), 
+                  axes=c(1,2), 
+                  size=3, 
+                  obslab=TRUE, # pour passer de points pour les sites (par défaut) à texte (nom des sites)
+                  arrow=NULL,
+                  labcol="forestgreen")
+pca.plot
+```
+
+Il y a beaucoup d'espèces affichées au milieu et c'est illisible. En plus, les espèces au milieu ne contribuent pas beaucoup à la distinction compositionnelle des sites. On va donc garder seulement les quelques espèces dont les scores ont la valeur absolue la plus élevée, pour chacun des deux axes, qu'on met en graphique (ici PC1 et PC2).
+
+D'abord, on va créer un nouveau dataframe contenant seulement ces espèces, en utilisant quelques fonctions de la librairie **dplyr**.
+```{r}
+library(dplyr)
+A <- top_n(sp.scores.df, 3, PC1) # sélectionne les 3 espèces dont le score est le plus élevé sur l'axe 1.
+B <- top_n(sp.scores.df, -3, PC1) # sélectionne les 3 espèces dont le score est le plus bas sur l'axe 1.
+C <- top_n(sp.scores.df, 3, PC2) # sélectionne les 3 espèces dont le score est le plus élevé sur l'axe 2.
+D <- top_n(sp.scores.df, -3, PC2) # sélectionne les 3 espèces dont le score est le plus bas sur l'axe 2.
+sp.scores.skim <- bind_rows(A,B,C,D) # merge les sub dataframe A, B, C et D.
+(sp.scores.skim <- distinct(sp.scores.skim)) # on ne garde que les rangées (espèces) qui sont uniques (pour éviter qu'une même espèce s'y retrouve en copies)
+```
+
+Mise en graphique de ces espèces seulement
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9), 
+                  axes=c(1,2), 
+                  size=3, 
+                  obslab=TRUE,
+                  arrow=NULL,
+                  txt=NULL, # enlever le texte (par défaut) pour les espèces
+                  addpts=sp.scores.skim, # Ajouter les espèces aux plus hauts et faibles scores
+                  addsize=3, # taille des points des espèces
+                  addcol="forestgreen") # couleur des espèces
+                  # on enlève l'argument labcol
+pca.plot
+```
+
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9), 
+                  axes=c(1,2), 
+                  size=3, 
+                  obslab=TRUE,
+                  arrow=NULL,
+                  txt=NULL, 
+                  addpts=sp.scores.skim, 
+                  addsize=4, # augmenter la taille du texte des espèces
+                  ptslab=TRUE, # changer de points à texte pour les espèces
+                  addcol="forestgreen")
+pca.plot
+```
+
+On va ajouter les résultats d'un `envfit`. D'abord, on fait le test, en s'assurant qu'on calcule la régression sur les deux axes qu'on a choisit de mettre en graphique (par défaut, 1 et 2).
+```{r}
+(pca.envfit <- envfit(pca.dune, dune.env))
+```
+
+Pour incorporer les vecteurs résultant de ce test, il faut d'abord les extraire et les mettre dans un dataframe.
+```{r}
+vect <- data.frame(pca.envfit[["vectors"]][["arrows"]])
+vect$variable.env<-rownames(vect) # il mettre le rowname(la variable environnementale en colonne)
+vect
+```
+
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9), 
+                  axes=c(1,2), 
+                  size=3, 
+                  obslab=TRUE,
+                  arrow=NULL,
+                  txt=NULL, 
+                  addpts=sp.scores.skim, 
+                  addsize=4, 
+                  ptslab=TRUE, 
+                  addcol="forestgreen")
+pca.plot + 
+  coord_fixed() + # ajout des vecteurs de envfit
+  geom_segment(data = vect,
+               aes(x = 0, xend = PC1, y = 0, yend = PC2),
+               arrow = arrow(length = unit(0.5, "cm")),
+               colour = "darkgrey") +
+  geom_text_repel(data = vect, 
+                  aes(x = PC1, y = PC2, label = variable.env, size = 3), 
+                  show.legend = FALSE)
+```
+
+Maintenant, on va ajouter des ellipses autour des sites appartenant à des groupes similaires. La fonction `ggord` est à même de calculer ces ellipses avec intervalle de confiance spécifiée. On va aussi revenir à des symboles au lieu du nom des sites et changer la couleur du texte des espèces. 
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9),
+                  axes=c(1,2),
+                  grp_in=dune.env$Management, # ajout des ellipses en fonction du type de Management
+                  grp_title = "Management",
+                  ellipse_pro=0.95, # valeur de confiance pour les ellipses
+                  alpha_el=0.3, # transparence des ellipses
+                  size=3, 
+                  obslab=FALSE, # changement de texte à points pour sites
+                  arrow=NULL,
+                  txt=NULL, 
+                  addpts=sp.scores.skim, 
+                  addsize=4, 
+                  ptslab=TRUE,
+                  addcol="black", # couleur des espèces
+                  alpha = 1)
+pca.plot + 
+    scale_shape_manual('Groups', values = c(15,16,17,18)) + # Symboles pour les sites en fonction de leur groupe. Assurer vous d'avoir un nombre de symboles correspondant au nombre de groupes.
+    coord_fixed() +
+    geom_segment(data = vect,
+               aes(x = 0, xend = PC1, y = 0, yend = PC2),
+               arrow = arrow(length = unit(0.5, "cm")), 
+               colour = "darkgrey") +
+    geom_text_repel(data = vect, 
+               aes(x = PC1, y = PC2, label = variable.env, size = 3), 
+               show.legend = FALSE)
+```
+
+Voici une légende indiquant quels symboles sont associées aux différentes valeurs numériques de la couche `scale_shape_manual`.
+
+![](./fig/ggplot_scale_shape-6.png)
+
+Changer les couleurs des groupes (types d'aménagement).
+On va extraire les codes des couleurs d'une palette de RColorBrewer avec la fonction `brewer.pal`
+```{r}
+library(RColorBrewer)
+pca.colors <- brewer.pal(n = 4, name = "Dark2") # Codes de couleur héxadécimaux
+```
+
+On va incorporer ces codes de couleurs dans un argument. On déplace la légende vers le haut.
+```{r}
+pca.plot <- ggord(pca.dune, 
+                  xlims=c(-1.2,1.4), ylims=c(-0.75,0.9),
+                  axes=c(1,2),
+                  grp_in=dune.env$Management, 
+                  grp_title = "Management",
+                  cols=pca.colors, # ajout des couleurs choisies
+                  ellipse_pro=0.95,
+                  alpha_el=0.3,
+                  size=3, 
+                  obslab=FALSE, 
+                  arrow=NULL,
+                  txt=NULL, 
+                  addpts=sp.scores.skim, 
+                  addsize=4, 
+                  ptslab=TRUE,
+                  addcol="black",
+                  alpha = 1)
+pca.plot <- pca.plot + # ici j'enregistre l'ensemble des arguments précédents et suivants dans mon objet pca.plot
+    scale_shape_manual('Groups', values = c(15,16,17,18)) + 
+    coord_fixed() +
+    geom_segment(data = vect,
+               aes(x = 0, xend = PC1, y = 0, yend = PC2),
+               arrow = arrow(length = unit(0.5, "cm")), 
+               colour = "darkgrey") +
+    geom_text_repel(data = vect, 
+                    aes(x = PC1, y = PC2, label = variable.env, size = 3), 
+                    show.legend = FALSE) +
+    theme(legend.position = 'top') # mettre la légende en haut
+pca.plot
+```
+
+## Créer un thème custom pour ggplot 
+
+Allez explorer les options (liste des arguments dans le fichier help, lorsque vous rentrez ?theme dans la console de R).
+```{r}
+super_theme <- theme(
+        panel.background = element_blank(),
+        panel.grid = element_blank(), # grillage, ici aucun, mais on aurait pu mettre par ex.  element_line("black"),
+        axis.line = element_line("black"),
+        text = element_text(size = 12),
+        axis.text = element_text(size = 10, colour = "gray25"), # taille des valeurs des axes
+        axis.title = element_text(size = 14, colour = "gray25"), # taille des titres des axes
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 14),
+        legend.key = element_blank())
+```
+
+Ajouter ce thème au graphique.
+```{r}
+pca.plot + super_theme
+```
+
+On va rajouter du texte!
+```{r}
+pca.plot + 
+    annotate("text", x = 1.1, y = 0.7, label = "PERMANOVA\nR2=30%\n p=0.007") +
+    super_theme
+```
+
+## Sauvegarder
+
+Satisfait? On sauvegarde l'image en png. Par défaut, ggplot enregistre le dernier graphique créé. Ici on copie-colle le code du graphique ci haut, puis sauvegarde ce graphique avec la fonction `ggsave` dans un dossier qu'on a créé (figures/).
+```{r}
+pca.plot + 
+    annotate("text", x = 1.1, y = 0.7, label = "PERMANOVA\nR2=30%\n p=0.007") +
+    super_theme
+ggsave("pca.png", path="./figures/")
+```
+
+Cet atelier n'est pas fait pour vous montrer à utiliser une esthétique particulière, mais bien pour vous familiariser avec les options (presque infinies...) permettant de personnaliser un graphique d'ordination. Allez voir des figures d'ordination dans la littérature. Essayez de reproduire l'esthétique qui vous semble la plus appropriée... ou, tout simplement, amusez-vous les artistes!!
+
+# CA
+
+## Préparation des données
+
+Faire une CA avec la fonction `cca`.
+```{r}
+ca.dune <- cca(dune)
+ca.summary <- summary(ca.dune)
+summary(ca.dune)
+```
+
+Extraction de la proportion de la variance expliquée par les deux premiers axes (pour s'y référer plus rapidement).
+```{r}
+(prop.expl.ca1 <- ca.summary$cont$importance[2, "CA1"])
+(prop.expl.ca2 <- ca.summary$cont$importance[2, "CA2"])
+```
+
+envfit
+```{r}
+(ca.envfit <- envfit(ca.dune, dune.env))
+```
+
+Pour incorporer les vecteurs résultant de ce test, il faut d'abord les extraire et les mettre dans un dataframe.
+```{r}
+vect.ca.env <- data.frame(ca.envfit[["vectors"]][["arrows"]])
+vect.ca.env$variable.env <- rownames(vect.ca.env)
+vect.ca.env
+```
+
+PERMANOVA. On va tester si la composition végétale diffère entre différents type d'aménagement (facteur; variable quantitative) des sites.
+```{r}
+dune.dist.chi2 <- vegdist(dune, method='chisq')
+disper.dune.chi2 <- betadisper(dune.dist.chi2, dune.env$Management)
+anova(disper.dune.chi2)
+permanova.dune.ca <- adonis2(dune.dist.chi2 ~ Management, data = dune.env)
+permanova.dune.ca
+```
+
+Ici, le résultat du test de dispersion indique que la différence dans la composition végétale entre les types d'aménagement qui est calculée par la PERMANOVA pourrait être du à la différence dans la variance interne en composition des groupes (les groupes ont une dispersion hétérogène).
+
+Extraire les scores de CA avec la fonction `scores`. Pour spécifier à ggplot quels sont les "points" ou le "texte" à mettre en graphique.
+```{r}
+site.scores.dune.ca <- scores(ca.dune, display="sites", choices=c(1,2)) # ici on garde que les scores des axes 1 et 2 mais on aurait pu extraire tous les scores aussi.
+site.scores.dune.ca <- data.frame(site.scores.dune.ca)
+Management <- dune.env$Management
+(site.scores.ca <- cbind(site.scores.dune.ca, Management)) # incorporer variable Management dans les scores (pour aider plus loin dans ggplot à changer l'aspect visuel des points des sites en fonction de leur Management)
+sp.scores.dune.ca <- scores(ca.dune, display="species", choices=c(1,2)) # idem scores axes 1 et 2 seulement
+(sp.scores.dune.ca <- data.frame(sp.scores.dune.ca))
+```
+
+Comme on a fait acvec les scores des espèces de la PCA, on ne garde que les plus hautes valeurs absolues.
+```{r}
+A.ca <- top_n(sp.scores.dune.ca, 3, CA1)
+B.ca <- top_n(sp.scores.dune.ca, -3, CA1)
+C.ca <- top_n(sp.scores.dune.ca, 3, CA2)
+D.ca <- top_n(sp.scores.dune.ca, -3, CA2)
+sp.scores.skim.ca <- bind_rows(A.ca,B.ca,C.ca,D.ca)
+(sp.scores.skim.ca <- distinct(sp.scores.skim.ca))
+```
+
+Graphique simple avec les fonctions `plot` et `ordiplot`.
+```{r}
+plot(ca.dune)
+ordiellipse(ca.dune, dune.env$Management, display = "sites", kind = "sd", label = T)
+```
+
+## ggplot
+
+On commence le graphique ggplot. On peut faire un graphique qui ressemble à celui fait par `plot` en ajoutant "à la main" les sites et les espèces (en fonction de leurs scores extraits).
+```{r}
+ca.plot <- 
+  ggplot(data = site.scores.ca, 
+         aes(x = CA1, y = CA2)) +
+  expand_limits(x=c(-4,4), y=c(-1,3)) + # sert à modifier l'échelle numérique du graphique
+  geom_text(data = site.scores.dune.ca, 
+            aes(x = CA1, y = CA2, label= rownames(site.scores.dune.ca)), 
+            color = "black") + # ajout du texte des sites
+  geom_text(data = sp.scores.dune.ca, 
+            aes(x = CA1, y = CA2, label= rownames(sp.scores.dune.ca)), 
+            color = "red") + # ajout du texte des espèces
+  xlab("CA1 (25.34%)") + 
+  ylab("CA2 (18.92%)") # contrairement avec la fonction ggord, on écrit la variation expliqué par les axes soi même
+ca.plot
+```
+
+On peut rajouter les vecteurs de note envfit.
+```{r}
+ca.plot <- 
+  ggplot(data = site.scores.ca, 
+         aes(x = CA1, y = CA2)) +
+  expand_limits(x=c(-2,2.5), y=c(-1,3)) + # on zoom in sur l'échelle
+  geom_text(data = site.scores.dune.ca, 
+            aes(x = CA1, y = CA2, label= rownames(site.scores.dune.ca)), 
+            color = "black") +
+  geom_text(data = sp.scores.dune.ca, 
+            aes(x = CA1, y = CA2, label= rownames(sp.scores.dune.ca)), 
+            color = "red") + 
+  xlab("CA1 (25.34%)") + 
+  ylab("CA2 (18.92%)") +
+  geom_segment(data = vect.ca.env, # ajout des vecteurs envfit
+               aes(x = 0, xend = CA1, y = 0, yend = CA2),
+               arrow = arrow(length = unit(0.75, "cm")), 
+               color = "black") +
+  geom_text_repel(data = vect.ca.env, 
+                  aes(x = CA1, y = CA2, label = variable.env, size = 3), 
+                  color = "firebrick1", 
+                  fontface = "bold", 
+                  show.legend = FALSE)
+ca.plot
+```
+
+On va mettre des points pour les sites et changer leurs couleurs et leurs symboles en fonction de leur type d'aménagement. On va aussi mettre en graphique uniquement les espèces aux plus grands scores.
+```{r}
+ca.plot <- 
+  ggplot(data = site.scores.ca, 
+         aes(x = CA1, y = CA2), 
+         color = Management) + # on ajoute ici arg "color"
+  expand_limits(x=c(-2,2.5), y=c(-1,3)) +
+  geom_point(aes(shape = Management, color = Management), 
+             size=3) + # on change de geom_text à geom_point pour les sites
+  xlab("CA1 (25.34%)") + 
+  ylab("CA2 (18.92%)") +
+  geom_text_repel(data = sp.scores.skim.ca, 
+                  aes(x = CA1, y = CA2), 
+                  label=rownames(sp.scores.skim.ca), 
+                  color = "black") + # on garde geom_text pour les espèces mais on change de dataframe
+  geom_segment(data = vect.ca.env,
+               aes(x = 0, xend = CA1, y = 0, yend = CA2),
+               arrow = arrow(length = unit(0.75, "cm")), 
+               color = "black") +
+  geom_text_repel(data = vect.ca.env, 
+                  aes(x = CA1, y = CA2, label = variable.env, size = 3), 
+                  color = "firebrick1", 
+                  fontface = "bold", 
+                  show.legend = FALSE) +
+  scale_shape_manual(values = c(15,16,17,18)) # on décide des symboles à utiliser (se référer à la charte plus haut)
+ca.plot
+```
+
+On va ajouter des ellipses autour de nos sites en fonction de leur type d'aménagement. On va d'abord utiliser la fonction `ggordiplot` de la librairie ggordiplots pour extraire les données des ellipses. (on peut aussi extraire les données de hulls et spiders.) En même temps, ça nous donne un autre beau graphique, mais qui est plus complexe à modifier.
+```{r}
+library(ggordiplots)
+ca.ggordiplot <- gg_ordiplot(ca.dune, groups = dune.env$Management, kind = "sd", conf = 0.95, pt.size = 3) # on spécifie l'intervalle de confiance des ellipses
+names(ca.ggordiplot)
+ca.ellipses <- ca.ggordiplot$df_ellipse # extraction des valeurs des ellipses
+head(ca.ellipses)
+```
+
+On prend les valeurs des ellipses qu'on vient d'extraire pour mettre en graphique dans ggplot ces ellipses. Om change aussi les couleurs de nos groupes.
+```{r}
+ca.plot <- 
+  ggplot(data = site.scores.ca, 
+         aes(x = CA1, y = CA2), 
+         color = Management) + 
+  expand_limits(x=c(-2,2.5), y=c(-1,3)) +
+  geom_point(aes(shape = Management, color = Management), 
+             size=3) +
+  xlab("CA1 (25.34%)") + 
+  ylab("CA2 (18.92%)") +
+  geom_text_repel(data = sp.scores.skim.ca, 
+                  aes(x = CA1, y = CA2), 
+                  label=rownames(sp.scores.skim.ca), 
+                  color = "black") +
+  geom_segment(data = vect.ca.env,
+               aes(x = 0, xend = CA1, y = 0, yend = CA2),
+               arrow = arrow(length = unit(0.75, "cm")),
+               color = "black") +
+  geom_text_repel(data = vect.ca.env, 
+                  aes(x = CA1, y = CA2, label = variable.env, size = 3), 
+                  color = "firebrick1", 
+                  fontface = "bold", 
+                  show.legend = FALSE) +
+  scale_shape_manual(values = c(15,16,17,18)) +
+  geom_path(data = ca.ellipses, 
+            aes(x = x, y = y, color = Group), 
+            show.legend = FALSE) + # ajout des ellipses
+  scale_color_brewer(palette="Dark2") # changement des couleurs des ellipses et des sites
+ca.plot
+```
+
+Enfin, on pourrait rajouter notre thème personnalisé, mais optons pour un existant comme "bw".
+```{r}
+ca.plot + theme_bw()
+```
+
+Comme mentionnée précédemment, vous pouvez modifier presque à l'infini votre graphique! 
+
+On sauvegarde notre figure de CA.
+```{r}
+ca.plot + theme_bw()
+ggsave("ca.png", path="./figures/")
+```
+
+# PCoA
+
+## Préparation des données
+
+Faire une PCoA avec la fonction `prcomp`.
+```{r}
+dune.bray <- vegdist(dune, method='bray')
+```
+
+## Faire une PCoA dans R
+```{r}
+pcoa.dune <- cmdscale(dune.bray, k =(nrow(dune) - 1), eig = TRUE)
+summary(pcoa.dune)
+```
+
+Dans cet exemple, on va s'intéresser aux axes 1 et 3, pour faire changement!
+
+Extraire les proportions expliquées par les axes d'intérêt (1 et 3).
+```{r}
+pcoa.eig2 <- eigenvals(pcoa.dune) # extraction des eigenvalues
+pcoa.eig2 <- abs(pcoa.eig2) # calcul de leurs valeurs absolues
+sum.pcoa.eig2 <- sum(pcoa.eig2) # total des eigenvalues
+pcoa.prop.exp <- pcoa.eig2/sum.pcoa.eig2 # proportion expliquée par chacun des axes
+(pcoa.axis1 <- pcoa.prop.exp[1])
+(pcoa.axis3 <- pcoa.prop.exp[3])
+```
+
+Extraire les scores de la PCoA.
+```{r}
+site.scores.pcoa <- scores(pcoa.dune) # site scores
+sp.scores.pcoa <- wascores(pcoa.dune$points, dune) # species scores 
+site.scores.pcoa <- data.frame(site.scores.pcoa)
+sp.scores.pcoa <- data.frame(sp.scores.pcoa)
+Management <- dune.env$Management
+site.scores.pcoa <- cbind(site.scores.pcoa, Management)
+```
+
+Comme on a fait acec les scores des espèces de la PCA et de la CA, on ne garde que les plus hautes valeurs absolues, mais cette fois ci, des axes 1 et 3!.
+```{r}
+A.pcoa <- top_n(sp.scores.pcoa, 3, X1)
+B.pcoa <- top_n(sp.scores.pcoa, -3, X1)
+C.pcoa<- top_n(sp.scores.pcoa, 3, X3)
+D.pcoa <- top_n(sp.scores.pcoa, -3, X3)
+sp.scores.skim.pcoa <- bind_rows(A.pcoa,B.pcoa,C.pcoa,D.pcoa)
+(sp.scores.skim.pcoa <- distinct(sp.scores.skim.pcoa))
+```
+
+envfit SUR LES AXES 1 ET 3 (on n'oublie pas!)
+```{r}
+(pcoa.envfit <- envfit(pcoa.dune, dune.env, choices=c(1,3)))
+```
+
+Pour incorporer les vecteurs résultant de ce test, il faut d'abord les extraire et les mettre dans un dataframe.
+```{r}
+vect.pcoa.env <- data.frame(pcoa.envfit[["vectors"]][["arrows"]])
+vect.pcoa.env$variable.env <- rownames(vect.pcoa.env)
+vect
+```
+
+PERMANOVA. On va tester si la composition végétale diffère entre différents type d'aménagement (facteur; variable quantitative) des sites.
+```{r}
+dune.dist.bray <- vegdist(dune, method='bray')
+disper.dune.bray <- betadisper(dune.dist.bray, dune.env$Management)
+anova(disper.dune.bray)
+permanova.dune.pcoa <- adonis2(dune.dist.bray ~ Management, data = dune.env)
+permanova.dune.pcoa
+```
+
+Extraction des ellipses de la PCoA (axes 1 et 3!)
+```{r}
+library(ggordiplots)
+pcoa.ggordiplot <- gg_ordiplot(pcoa.dune, choices = c(1,3), groups = dune.env$Management, kind = "sd", conf = 0.95, pt.size = 3)
+names(pcoa.ggordiplot)
+pcoa.ellipses <- pcoa.ggordiplot$df_ellipse
+```
+
+## ggplot
+```{r}
+pcoa.plot <- 
+  ggplot(data = site.scores.pcoa, 
+         aes(x = Dim1, y = Dim3), 
+         color = Management) + 
+  expand_limits(x=c(-0.35,0.6), y=c(-0.35,0.35)) +
+  geom_point(aes(shape = Management, color = Management), 
+             size=3) +
+  xlab("PCoA1 (35.10%)") + 
+  ylab("PCoA3 (9.44%)") +
+  geom_text_repel(data = sp.scores.skim.pcoa, 
+                  aes(x = X1, y = X3), 
+                  label=rownames(sp.scores.skim.pcoa), 
+                  color = "black") +
+  geom_segment(data = vect.pcoa.env, 
+               aes(x = 0, xend = Dim1, y = 0, yend = Dim3),
+               arrow = arrow(length = unit(0.75, "cm")), 
+               color = "black") +
+  geom_text_repel(data = vect.pcoa.env, 
+                  aes(x = Dim1, y = Dim3, label = variable.env, size = 3), 
+                  color = "firebrick1", 
+                  fontface = "bold", 
+                  show.legend = FALSE) +
+  scale_shape_manual(values = c(15,16,17,18)) +
+  geom_path(data = pcoa.ellipses, 
+            aes(x = x, y = y, color = Group), 
+            show.legend = FALSE) + 
+  scale_color_brewer(palette="Dark2") +
+  super_theme
+pcoa.plot
+ggsave("pcoa.png", path="./figures/")
+```
