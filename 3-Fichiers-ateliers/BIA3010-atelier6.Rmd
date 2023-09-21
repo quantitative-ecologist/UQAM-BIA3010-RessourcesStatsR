@@ -36,7 +36,7 @@ Voici quelques exemples de structures de matrices (Ovaskainen et al. 2017):
 
 <br>
 
-![](./fig/matrixfig.png)
+![](./3-Fichiers-ateliers/images_ateliers/matrixfig.png)
 
 <br>
 
@@ -116,7 +116,7 @@ Les ordinations sont très adaptées au analyses en écologie des communautés. 
 
 Nos **objets** (sites, parcelles) peuvent être positionnés dans un espace multidimensionnel en fonction de leur composition, où chaque axe (dimension) représente un **descripteur** (ex. une espèce). Dans cet espace multidimensionnel ellipsoïde, les sites situés plus proches l'un de l'autre sont plus similaires dans leur composition en espèces que les sites situés plus loin. 
 
-![Source : Michael W. Palmer; https://ordination.okstate.edu/overview.htm. Sur la figure, les points sont les objets (les sites) et les axes sur la figure du milieu sont les descripteurs (les espèces).](./fig/ordinations.png)
+![Source : Michael W. Palmer; https://ordination.okstate.edu/overview.htm. Sur la figure, les points sont les objets (les sites) et les axes sur la figure du milieu sont les descripteurs (les espèces).](./3-Fichiers-ateliers/images_ateliers/ordinations.png)
 
 Or, cet espace comporte autant de dimensions que de descripteurs (espèces) et il est très difficile de représenter ou de visualiser un espace à plus de 3 dimensions!
 
