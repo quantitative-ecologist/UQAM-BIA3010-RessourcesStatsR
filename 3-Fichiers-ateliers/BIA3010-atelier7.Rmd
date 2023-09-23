@@ -432,7 +432,7 @@ Calculer le ratio des cotes e^-b nous permet d'avoir une idée générale de l'e
 
 Mais ce qui vous intéresse dans le cadre de cet atelier, c'est de visualiser les effets desdites variables!
 
-Pour simplifier les calculs, on peut utiliser la fonction `ggpredict()` du package `ggeffects`. Celle-ci nous calcule les probabilités de survie (ou de succès) ainsi qu'un intervalle de confiance. On peut ensuite utiliser ces probabilités pour réaliser une figure avec `ggplot()`.
+Pour simplifier les calculs, on peut utiliser la fonction `ggpredict()` du package `ggeffects`. Celle-ci nous calcule les probabilités de survie (ou de succès) ainsi qu'un intervalle de prédiction. On peut ensuite utiliser ces probabilités pour réaliser une figure avec `ggplot()`.
 
 Reprenons notre jeu de données.
 
@@ -472,7 +472,7 @@ predictions.masse
 
 ```
 
-Dans le récapitulatif, on voit l'étendue des valeurs de masse, ainsi que la probabilité de survie prédite pour chaque valeur de masse. De plus, un intervalle de confiance à 95% a été calculé. On a donc ce qu'il faut pour réaliser notre figure.
+Dans le récapitulatif, on voit l'étendue des valeurs de masse, ainsi que la probabilité de survie prédite pour chaque valeur de masse. De plus, un intervalle de prédiction a été calculé. On a donc ce qu'il faut pour réaliser notre figure.
 
 Nous utiliserons comme source de données, la table de prédictions que nous venons de sortir.
 
@@ -486,7 +486,7 @@ geom_line(data = predictions.masse,
 plot.masse
 ```
 
-On voit que la valeur maximale de l'axe y est de 1, qui correspondrait à une probabilité de 100%. Il est important d'ajouter notre invervalle de confiance, avec `geom_ribbon`. On utilise à nouveau notre table de prédictions, puisqu'elle contient les intervalles de confiance. Avec `aes(ymin = conf.low, ymax = conf.high)`, on délimite les limites haut et bas de notre ruban. Ces limites correspondent aux valeurs d'intervalle calculées. Avec `alpha = .2`, le ruban est plus translucide: 
+On voit que la valeur maximale de l'axe y est de 1, qui correspondrait à une probabilité de 100%. Il est important d'ajouter notre invervalle de prédiction, avec `geom_ribbon`. On utilise à nouveau notre table de prédictions, puisqu'elle contient les valeurs d'intervalles de prédiction. Avec `aes(ymin = conf.low, ymax = conf.high)`, on délimite les limites haut et bas de notre ruban. Ces limites correspondent aux valeurs d'intervalle calculées. Avec `alpha = .2`, le ruban est plus translucide: 
 
 ```{r}
 
@@ -580,7 +580,7 @@ plot.masse
 ```
 
 Terminons la figure avec une jolie couleur, tiens:
-Dans `geom_line()`, j'ajoute `color=group` à l'argument `aes()`. On indique ainsi que le paramètre graphique de la couleur du trait sera associée aux "groupes". Pour l'instant, on n'a qu'un seul groupe, donc ça peut sembler abstrait. Par contre, c'est ce qui nous permet, avec `scale_color_manual()`, de changer la couleur de notre ligne. 
+Dans `geom_line()`, j'ajoute `color=group` à l'argument `aes()`. On indique ainsi que le paramètre graphique de la couleur du trait sera associée aux "groupes". Pour l'instant, on n'a qu'un seul groupe, donc ça peut sembler abstrait. Par contre, c'est ce qui nous permet, avec `scale_color_manual()`, de changer la couleur de notre ligne. Cette fois-ci, j'utilise un code de couleur hexadécimal au lieu d'un nom de couleur prédéfini dans R (voir https://htmlcolorcodes.com/).
 
 Même chose pour le ruban: dans `geom_ribbon()`, j'ajoute `fill=group` à l'argument `aes()`, pour assigner le remplissage du ruban aux "groupes".
 
@@ -634,7 +634,7 @@ plot.masse
 
 ```
 
-On pourrait aussi ajouter une couche de données contenant les données brutes, avec `geom_point`. Toutefois, on souhaite afficher les données brutes issues de `surv`, et non les résultats de notre modèle `predictions.masse`. Donc comme avec notre ANOVA, on assigne nos `aes()` dans `geom_point(data=surv, aes(x=masse, y=survie))`. J'utilise `position = position_jitter()`, car cela permet de mieux voir les points qui sont collés tous à la même valeur, soit 0 et 1 (aussi, détail, mais pour cette figure, je dois aussi ajouter `height = 0.01` pour réduire le niveau de jitter appliqué en y, sinon le jitter s'énerve un peu trop et remplit tout l'espace - je crois que c'est lié au fait que notre variable n'a que deux valeurs...). De plus, vu que ça fait "déborder" les points un peu en dessous de 0 et un peu au dessus de 1, j'élargis les limites de l'axe y avec `limits = c(-0.02, 1.02))` dans `scale_y_continuous()`.
+On pourrait aussi ajouter une couche de données contenant les données brutes, avec `geom_point`. Toutefois, on souhaite afficher les données brutes issues de `surv`, et non les résultats de notre modèle `predictions.masse`. Donc comme avec notre ANOVA, on assigne nos `aes()` dans `geom_point(data=surv, aes(x=masse, y=survie))`. J'utilise `position = position_jitter()`, car cela permet de mieux voir les points qui sont collés tous à la même valeur, soit 0 et 1 (aussi, détail, mais pour cette figure, je dois aussi ajouter `height = 0.01` pour réduire le niveau de jitter appliqué en y, sinon le jitter s'énerve un peu trop et remplit tout l'espace - je crois que c'est lié au fait que notre variable n'a que deux valeurs...). J'ajoute aussi `scale_x_continuous(breaks = seq(96, 106, by = 2))` pour définir les ticks de notre axe (ceux-ci peuvent varier à cause du jitter).
 
 On termine en changeant la couleur des points et en augmentant la taille du trait avec `linewidth=1.1` dans `geom_line`.
 
@@ -665,7 +665,8 @@ theme(panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5))+
 scale_y_continuous(labels = scales::percent, 
-                   limits = c(-0.02, 1.02))
+                   limits = c(0, 1))+
+scale_x_continuous(breaks = seq(96, 106, by = 2))
 
 plot.masse
 
@@ -752,7 +753,7 @@ plot.masse.sexe
 ```
 
 
-On doit ajouter nos intervalles de confiance:
+On doit ajouter nos intervalles de prédiction:
 
 ```{r}
 
@@ -822,7 +823,8 @@ On peut ajouter les éléments graphiques que nous avions codés pour la figure 
 `labs()`
 `theme_bw()`
 `theme()`
-`scale_y_continuous(labels = scales::percent, limits = c(-0.02, 1.02))`
+`scale_y_continuous(labels = scales::percent, limits = c(0, 1))`
+`scale_x_continuous(breaks = seq(96, 106, by = 2))`
 
 
 ```{r}
@@ -848,8 +850,9 @@ theme_bw()+
 theme(panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5))+
-scale_y_continuous(labels = scales::percent, 
-                   limits = c(-0.02, 1.02))
+scale_y_continuous(labels = scales::percent,
+                   limits = c(0, 1))+
+scale_x_continuous(breaks = seq(96, 106, by = 2))
 
 plot.masse.sexe
 
@@ -883,8 +886,9 @@ theme_bw()+
 theme(panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5))+
-scale_y_continuous(labels = scales::percent, 
-                   limits = c(-0.02, 1.02))
+scale_y_continuous(labels = scales::percent,
+                   limits = c(0, 1))+
+scale_x_continuous(breaks = seq(96, 106, by = 2))
 
 plot.masse.sexe
 
@@ -898,7 +902,7 @@ Je dois faire une dernière étape pour afficher correctement les données brute
 surv$sex<-as.factor(surv$sex)
 ```
 
-Sinon, il traite `sex` comme étant une variable continue (ce qu'elle est), et on ne peut pas appliquer les paramètres graphiques correctement!
+Sinon, il traite `sex` comme étant une variable continue (ce qu'elle est pour l'instant), et on ne peut pas appliquer les paramètres graphiques correctement!
 
 (Idéalement, faire cela avant l'analyse...!)
 
@@ -929,8 +933,8 @@ theme_bw()+
 theme(panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5))+
-scale_y_continuous(labels = scales::percent, 
-                   limits = c(-0.02, 1.02))+
+scale_y_continuous(labels = scales::percent,
+                   limits = c(0, 1))+
 scale_x_continuous(breaks = seq(96, 106, by = 2))
 
 plot.masse.sexe
@@ -1044,8 +1048,8 @@ theme_bw()+
 theme(panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5))+
-scale_y_continuous(labels = scales::percent, 
-                   limits = c(-0.02, 1.02))+
+scale_y_continuous(labels = scales::percent,
+                   limits = c(0, 1))+
 scale_x_continuous(breaks = seq(96, 106, by = 2))+
 facet_wrap(~ facet, labeller = labeller(facet = c( "57.64" = "58 jours", "59.98" = "60 jours",  "62.32" = "62 jours"))) 
 
@@ -1194,6 +1198,10 @@ plot.regr.SL
 
 
 Wow!
+
+**À noter, toutefois**, que vous ne pourrez pas utiliser la fonction `geom_smooth(method = lm)` si votre modèle linéaire contient plusieurs variables explicatives: la droite tracée représenterait seulement y ~ x et non tout le modèle y ~ x1 + x2, par exemple.
+
+C'est pour ça qu'il serait mieux d'utiliser `ggpredict()` ou `predict()` pour calculer les prédictions du modèle et ensuite tracer la courbe, comme nous avons fait pour le GLM binomial.
 
 
 <br>
