@@ -144,7 +144,7 @@ https://statisticsbyjim.com/basics/data-types/
 
 <br>
 
-# ANOVA
+## ANOVA
 La fonction de base `plot()` permet de visualiser rapidement un jeu de données, par exemple avec un histogramme. Par contre, vous verrez que son utilisation peut devenir limitée lorsqu'il s'agit de réaliser des figures plus complexes ou simplement modifier certains paramètres graphiques. 
 
 C'est pour cela que nous suggérons d'utiliser la fonction `ggplot()`, du package `ggplot2`. Cette fonction permet de réaliser des graphiques de façon plus intuitive et permet de les mettre en page plus facilement qu'avec la fonction `plot()`. Elle est aussi mieux documentée, il est donc plus facile de comprendre et utiliser les différents aspects de la fonction. Google est d'ailleurs votre meilleur allié pour la réalisation de vos figures!
@@ -390,12 +390,7 @@ scale_x_discrete(labels = c("I. setosa", "I. versicolor", "I. virginica"))
 ```
 
 
-# Régression linéaire
-
-<br>
-
-
-# GLM
+## GLM binomial
 
 
 Essayons avec un type d'analyse différent, les GLM binomiaux. 
@@ -1065,7 +1060,7 @@ plot.masse.sexe.age1
 
 <br>
 
-# Régression linéaire simple
+## Régression linéaire simple
 
 
 Maintenant qu'on a fait un exemple plus compliqué, essayons d'illustrer un modèle linéaire simple.
@@ -1203,7 +1198,7 @@ Wow!
 
 <br>
 
-# *Cheat sheet* `ggplot()`
+## *Cheat sheet* ggplot()
 
 Maintenant que vous êtes plus familiers avec `ggplot()`, voici un lien pour une *cheat sheet* pour `ggplot()`:
 
@@ -1213,9 +1208,10 @@ Elle contient toute l'information sur les différents `aes()`, `geom_*()`, `scal
 
 <br>
 
-# À considérer lors de la création de figures
+## À considérer lors de la création de figures
 
 Comme mentionné plus tôt, il faut être judicieux dans le choix de notre symbologie. 
+
 En effet, les couleurs et les symboles ont souvent un sens qui nous est intuitif, et représentent ainsi de l'information - quelles couleurs choisiriez-vous pour illustrer une température chaude? Froide?
 
 Ces choix de couleur contribuent à donner un sens à vos figures. Il existe des palettes de couleurs conçue pour illustrer des données, par exemple, d'élévation, ou de température. Certaines sont conçues pour maximiser le contraste entre les extrêmes des valeurs d'une variable.
@@ -1230,6 +1226,7 @@ Toutefois, certaines publications scientifiques n'acceptent que les figures en n
 
 De plus, assurez-vous que vos axes sont représentatifs de vos données.
 
+## Sauvegarder votre figure
 
 Pour terminer, utilisez une fonction pour exporter vos figures. "Copier-coller" ne suffit pas, car la résolution ne sera pas assez bonne. 
 
